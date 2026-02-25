@@ -1,16 +1,31 @@
-# React + Vite
+# 🏢 Atria AS (Administrative System)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-Currently, two official plugins are available:
+> 🚧 **ESTADO DEL PROYECTO: EN DESARROLLO ACTIVO (FASE ALPHA)** 🚧
+**Atria AS** es un sistema integral de administración, tesorería y control fiscal de escritorio, diseñado bajo una arquitectura *Offline-First*. Su objetivo principal es devolverle el control y la privacidad a las empresas sobre su información financiera, procesando todo localmente sin dependencias de la nube.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ Características Principales
 
-## React Compiler
+* 🔒 **100% Local y Privado:** Toda la base de datos (basada en un sistema de archivos JSON de alta velocidad) y el procesamiento ocurren en el disco duro del usuario.
+* 📄 **Motor de Procesamiento Fiscal:** Lectura automatizada de archivos XML y PDF. Extracción instantánea de UUIDs, PUE/PPD, desglose de impuestos (IVA, IEPS) y prevención de facturas duplicadas.
+* 🧠 **Inteligencia Artificial Integrada:** Incorpora un motor de PLN (Procesamiento de Lenguaje Natural) ejecutado en local mediante `Transformers.js`. Realiza clustering semántico para detectar, agrupar y homologar productos de diferentes proveedores que no cuentan con código de barras.
+* 📥 **Buzón Inteligente IMAP:** Sincronización directa con servidores de correo para la descarga automatizada y categorización de comprobantes fiscales.
+* 💰 **Tesorería y Cuentas por Pagar:** Gestión de perfiles de proveedores, historial de deudas, abonos y vinculación automática de Notas de Crédito y Recibos Electrónicos de Pago (REP).
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+## 🛠️ Stack Tecnológico
+* **Frontend:** React + Tailwind CSS (Diseño modular e interfaces fluidas).
+* **Backend:** Node.js integrado en Electron (`main.cjs`).
+* **Base de Datos:** Local File System (`fs-extra`) para máxima portabilidad.
+* **Motor IA:** `@xenova/transformers` (Modelo multilingüe MiniLM-L12-v2 en RAM).
 
-## Expanding the ESLint configuration
+## 🗺️ Próximos Pasos (Roadmap) y Tareas Pendientes
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+El núcleo del sistema (Parseo de XML y clustering con IA) está operativo, pero sigo trabajando en las siguientes implementaciones:
+
+* [ ] **Depuración Continua:** Identificación y corrección de bugs en el manejo de estado de React.
+* [ ] **Filtros Avanzados de IA:** Crear una "Lista Blanca" para excluir a proveedores monopólicos de las comparativas de precios.
+* [ ] **Auditoría Manual:** Activar la expulsión manual de productos intrusos en los grupos semánticos detectados por la IA.
+* [ ] **Analítica Visual:** Construcción del módulo de gráficas para comparar los precios históricos de las materias primas.
+
+---
+*Desarrollado para optimizar y automatizar el flujo contable y administrativo.*

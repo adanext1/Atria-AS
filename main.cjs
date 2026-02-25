@@ -1574,11 +1574,17 @@ ipcMain.handle('agrupar-productos-similares', async (event) => {
   try {
     const config = store.get('userConfig');
     const rutaMaestro = path.join(config.rutaDestino, 'productos_maestros.json');
+    const rutaMapeos = path.join(config.rutaDestino, 'mapeos_sistema.json'); // NUEVO
     if (!fs.existsSync(rutaMaestro)) return { success: false, error: 'No hay catálogo' };
 
     const maestro = JSON.parse(fs.readFileSync(rutaMaestro, 'utf8'));
-    // SOLO agarramos los que tienen vector y NO han sido auditados/aprobados
-    const productos = Object.entries(maestro).filter(([id, data]) => data.vector && !data.auditado);
+    let mapeos = [];
+    if (fs.existsSync(rutaMapeos)) {
+      mapeos = JSON.parse(fs.readFileSync(rutaMapeos, 'utf8'));
+    }
+
+    // SOLO agarramos los que tienen vector y NO han sido auditados/aprobados/excluidos
+    const productos = Object.entries(maestro).filter(([id, data]) => data.vector && !data.auditado && data.vector !== 'EXCLUIDO');
 
     let grupos = [];
     let procesados = new Set();
@@ -1587,10 +1593,14 @@ ipcMain.handle('agrupar-productos-similares', async (event) => {
       const [idA, dataA] = productos[i];
       if (procesados.has(idA)) continue;
 
+      // Buscar el rfc usando mapeos para inyectarlo al Frontend
+      const mapA = mapeos.find(m => m.master_id === idA);
+      const rfcA = mapA ? mapA.rfc_proveedor : 'DESCONOCIDO';
+
       let grupoActual = {
         id_temporal: `grupo_${i}`,
         sugerencia_nombre_global: dataA.nombre_limpio,
-        items: [{ id: idA, nombre: dataA.nombre_limpio, similitud: 1.0 }]
+        items: [{ id: idA, nombre: dataA.nombre_limpio, similitud: 1.0, rfc_proveedor: rfcA }]
       };
       procesados.add(idA);
 
@@ -1607,12 +1617,47 @@ ipcMain.handle('agrupar-productos-similares', async (event) => {
         const similitud = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 
         if (similitud > 0.82) { // 82% de similitud mínima para agrupar
-          grupoActual.items.push({ id: idB, nombre: dataB.nombre_limpio, similitud: similitud });
+          const mapB = mapeos.find(m => m.master_id === idB);
+          const rfcB = mapB ? mapB.rfc_proveedor : 'DESCONOCIDO';
+
+          // FASE 10: Prevención de Mismo Proveedor
+          // Si el rfc de este producto B ya existe dentro del grupo actual de la propuesta, NO se puede añadir.
+          // Un proveedor no puede estar dos veces en el mismo grupo de similitud (Ej. Leche Ley 1L vs Leche Ley 2L)
+          const yaExisteProveedorEnGrupo = grupoActual.items.some(item => item.rfc_proveedor === rfcB && rfcB !== 'DESCONOCIDO');
+
+          if (yaExisteProveedorEnGrupo) {
+            continue; // Saltamos este producto para este grupo. Se evaluará luego en su propio grupo.
+          }
+
+          grupoActual.items.push({ id: idB, nombre: dataB.nombre_limpio, similitud: similitud, rfc_proveedor: rfcB });
           procesados.add(idB);
         }
       }
 
-      if (grupoActual.items.length > 1) grupos.push(grupoActual);
+      if (grupoActual.items.length > 1) {
+        // --- INICIO MAGIA IA: NOMBRES INTELIGENTES ---
+        // Tomamos todos los nombres originales fragmentados en palabras
+        const arraysDePalabras = grupoActual.items.map(item => item.nombre.split(' '));
+        // Usamos el nombre que tenga menos palabras como pivote para comparar
+        let pivote = arraysDePalabras.reduce((a, b) => a.length <= b.length ? a : b);
+        let palabrasEnComun = [];
+
+        for (const palabra of pivote) {
+          // Checamos si esta palabra exacta existe dentro de TODOS los demás productos del grupo
+          const sobreviveEnTodos = arraysDePalabras.every(arr => arr.includes(palabra));
+          if (sobreviveEnTodos) {
+            palabrasEnComun.push(palabra);
+          }
+        }
+
+        // Si sobrevive al menos una palabra, ese es el nuevo "Nombre Unificador"
+        if (palabrasEnComun.length > 0) {
+          grupoActual.sugerencia_nombre_global = palabrasEnComun.join(' ');
+        }
+        // --- FIN MAGIA IA ---
+
+        grupos.push(grupoActual);
+      }
     }
     grupos.sort((a, b) => b.items.length - a.items.length);
     return { success: true, grupos };
@@ -1649,6 +1694,197 @@ ipcMain.handle('aprobar-grupo-productos', async (event, { nombreGlobal, idsSelec
     }
 
     // Guardamos los cambios en el disco duro (Tu bóveda)
+    fs.writeFileSync(rutaMaestro, JSON.stringify(maestro, null, 2));
+    fs.writeFileSync(rutaMapeos, JSON.stringify(mapeos, null, 2));
+
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC para expulsar un producto de las agrupaciones de IA temporalmente
+ipcMain.handle('expulsar-producto-grupo', async (event, id_producto) => {
+  try {
+    const config = store.get('userConfig');
+    const rutaMaestro = path.join(config.rutaDestino, 'productos_maestros.json');
+    if (!fs.existsSync(rutaMaestro)) return { success: false, error: 'No hay catálogo' };
+
+    let maestro = JSON.parse(fs.readFileSync(rutaMaestro, 'utf8'));
+
+    if (maestro[id_producto]) {
+      // MAGIA: Lo dejamos explícitamente como auditado: false.
+      // Al aprobarse el resto del grupo, este se quedará solito y huérfano
+      // esperando a la siguiente IA o a la pestaña de pendientes.
+      maestro[id_producto].auditado = false;
+      fs.writeFileSync(rutaMaestro, JSON.stringify(maestro, null, 2));
+      return { success: true };
+    } else {
+      return { success: false, error: 'Producto no encontrado en catálogo maestro.' };
+    }
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC para obtener todos los productos huérfanos/pendientes (auditado: false y vector listo)
+ipcMain.handle('obtener-productos-pendientes', async (event) => {
+  try {
+    const config = store.get('userConfig');
+    const rutaMaestro = path.join(config.rutaDestino, 'productos_maestros.json');
+    const rutaMapeos = path.join(config.rutaDestino, 'mapeos_sistema.json');
+    if (!fs.existsSync(rutaMaestro)) return { success: false, error: 'No hay catálogo' };
+
+    const maestro = JSON.parse(fs.readFileSync(rutaMaestro, 'utf8'));
+    let mapeos = [];
+    if (fs.existsSync(rutaMapeos)) {
+      mapeos = JSON.parse(fs.readFileSync(rutaMapeos, 'utf8'));
+    }
+
+    // Buscamos todos los que NO están auditados y NO están excluidos deliberadamente
+    const huérfanos = [];
+    for (const [id, data] of Object.entries(maestro)) {
+      if (!data.auditado && data.vector && data.vector !== 'EXCLUIDO') {
+        const mapeo = mapeos.find(m => m.master_id === id);
+        huérfanos.push({
+          id: id,
+          nombre_limpio: data.nombre_limpio,
+          rfc_proveedor: mapeo ? mapeo.rfc_proveedor : 'DESCONOCIDO'
+        });
+      }
+    }
+
+    return { success: true, productos: huérfanos };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC para asimilar permanentemente a un huérfano como un producto independiente
+ipcMain.handle('aprobar-producto-individual', async (event, id_producto) => {
+  try {
+    const config = store.get('userConfig');
+    const rutaMaestro = path.join(config.rutaDestino, 'productos_maestros.json');
+    if (!fs.existsSync(rutaMaestro)) return { success: false, error: 'No hay catálogo' };
+
+    let maestro = JSON.parse(fs.readFileSync(rutaMaestro, 'utf8'));
+
+    if (maestro[id_producto]) {
+      // Al marcarlo como auditado, se asimila a la bóveda permanentemente
+      maestro[id_producto].auditado = true;
+      fs.writeFileSync(rutaMaestro, JSON.stringify(maestro, null, 2));
+      return { success: true };
+    } else {
+      return { success: false, error: 'Producto no encontrado.' };
+    }
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+});
+
+// FASE 7: Obtener catálogo maestro estructurado con sus hijos anidados
+ipcMain.handle('obtener-catalogo-agrupado', async (event) => {
+  try {
+    const config = store.get('userConfig');
+    const rutaMaestro = path.join(config.rutaDestino, 'productos_maestros.json');
+    const rutaMapeos = path.join(config.rutaDestino, 'mapeos_sistema.json');
+    if (!fs.existsSync(rutaMaestro)) return { success: false, error: 'No hay catálogo' };
+
+    const maestro = JSON.parse(fs.readFileSync(rutaMaestro, 'utf8'));
+    let mapeos = [];
+    if (fs.existsSync(rutaMapeos)) {
+      mapeos = JSON.parse(fs.readFileSync(rutaMapeos, 'utf8'));
+    }
+
+    // Convertir a un arreglo donde cada maestro tenga su lista de "hijos"
+    const catalogo = [];
+
+    // Recorremos cada producto maestro (Solo los auditados entran al catálogo formal)
+    for (const [id, data] of Object.entries(maestro)) {
+      if (data.auditado && data.vector !== 'EXCLUIDO') {
+        // Buscar quiénes están mapeados a este ID Maestro
+        const hijosSincronizados = mapeos.filter(m => m.master_id === id);
+
+        catalogo.push({
+          id_maestro: id,
+          nombre_global: data.nombre_limpio,
+          hijos: hijosSincronizados // Lista de ítems originales
+        });
+      }
+    }
+
+    // Ordenar alfabéticamente para facilidad de lectura
+    catalogo.sort((a, b) => a.nombre_global.localeCompare(b.nombre_global));
+
+    return { success: true, catalogo };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+});
+
+// FASE 7: Desagrupar (Desvincular) un producto específico de su grupo maestro
+ipcMain.handle('desagrupar-producto', async (event, { rfc_proveedor, nombre_en_xml }) => {
+  try {
+    const config = store.get('userConfig');
+    const rutaMaestro = path.join(config.rutaDestino, 'productos_maestros.json');
+    const rutaMapeos = path.join(config.rutaDestino, 'mapeos_sistema.json');
+    if (!fs.existsSync(rutaMaestro) || !fs.existsSync(rutaMapeos)) return { success: false, error: 'Archivos no encontrados' };
+
+    let maestro = JSON.parse(fs.readFileSync(rutaMaestro, 'utf8'));
+    let mapeos = JSON.parse(fs.readFileSync(rutaMapeos, 'utf8'));
+
+    // 1. Encontrar el mapeo específico que queremos romper
+    const indiceMapeo = mapeos.findIndex(m => m.rfc_proveedor === rfc_proveedor && m.nombre_en_xml === nombre_en_xml);
+
+    if (indiceMapeo === -1) {
+      return { success: false, error: 'No se encontró el vínculo en el sistema.' };
+    }
+
+    const mapRoto = mapeos[indiceMapeo];
+    const idMaestroOriginal = mapRoto.master_id;
+
+    // Heredamos el vector del maestro para no obligar a la IA a re-vectorizar y para que aparezca en Pendientes instantáneamente.
+    const vectorHeredado = maestro[idMaestroOriginal] ? maestro[idMaestroOriginal].vector : null;
+
+    // 2. Eliminar el mapeo para romper el puente
+    mapeos.splice(indiceMapeo, 1);
+
+    // 3. Crear una nueva entrada en productos_maestros para que este ítem vuelva a nacer 
+    // y se vaya a la pestaña de pendientes (auditado: false)
+    const crypto = require('crypto');
+    const nuevoIdMaestro = crypto.randomUUID();
+
+    maestro[nuevoIdMaestro] = {
+      nombre_limpio: mapRoto.nombre_en_xml,
+      codigos_barras: [],
+      claveSAT: "",
+      unidad_oficial: "S/U",
+      vector: vectorHeredado,
+      auditado: false // Esto lo manda a "Pendientes (Sin Agrupar)" en el Frontend
+    };
+
+    // 4. Volvemos a mapear este producto a su nuevo ID Maestro recién nacido
+    mapeos.push({
+      ...mapRoto,
+      master_id: nuevoIdMaestro
+    });
+
+    // 5. Verificar si el Maestro Original se quedó vacío (sin mapeos hijos). 
+    // Si es así, lo borramos para que no quede como fantasma.
+    const mappingsRestantes = mapeos.filter(m => m.master_id === idMaestroOriginal);
+    if (mappingsRestantes.length === 0) {
+      delete maestro[idMaestroOriginal];
+    } else if (maestro[idMaestroOriginal]) {
+      // Opcional: Si el grupo quedó de 1, sigue siendo Auditado.
+      // Se queda como estaba, pero con 1 solo hijo.
+    }
+
+    // Guardar cambios
     fs.writeFileSync(rutaMaestro, JSON.stringify(maestro, null, 2));
     fs.writeFileSync(rutaMapeos, JSON.stringify(mapeos, null, 2));
 
