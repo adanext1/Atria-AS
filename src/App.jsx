@@ -8,16 +8,17 @@ import DetalleProveedor from './components/DetalleProveedor';
 import BovedaFacturas from './components/BovedaFacturas';
 import Importador from './components/Importador';
 import ModuloCorreos from './components/BuzonInteligente/index';
-import CentroApps from './components/CentroApps'; // <--- IMPORTACIÓN DEL MOCKUP
+import CentroApps from './components/CentroApps';
 import BarraApps from './components/BarraApps';
-import ModuloProductos from './components/ModuloProductos'; // <--- IMPORTACIÓN DEL NUEVO MÓDULO
+import ModuloProductos from './components/ModuloProductos';
+import ModuloPrecios from './components/ModuloPrecios'; // <--- IMPORTACIÓN DE PRECIOS
 
 function App() {
   const [estaLogueado, setEstaLogueado] = useState(false);
   const [modoOscuro, setModoOscuro] = useState(false);
-  
+
   const [pantallaActual, setPantallaActual] = useState('dashboard');
-  
+
   // ¡NUEVO! Estado para saber qué proveedor le pasaremos al formulario
   const [proveedorEditando, setProveedorEditando] = useState(null);
 
@@ -26,27 +27,28 @@ function App() {
   return (
     <div className={`${modoOscuro ? 'dark' : ''} min-h-screen transition-colors duration-300`}>
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100">
-        
+
         {!estaLogueado ? (
           <Login alLoguearse={() => setEstaLogueado(true)} />
         ) : (
           pantallaActual === 'dashboard' ? (
-            <Dashboard 
+            <Dashboard
               alCerrarSesion={() => setEstaLogueado(false)} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
               irAConfiguracion={() => setPantallaActual('configuracion')}
               irAProveedores={() => setPantallaActual('proveedores')}
               irABoveda={() => setPantallaActual('boveda')}
               irAImportador={() => setPantallaActual('importador')}
               irAlCorreo={() => setPantallaActual('modulo-correos')}
-              irAApps={() => setPantallaActual('centro-apps')} // <--- CONEXIÓN CON LA NUEVA TARJETA
-              irAProductos={() => setPantallaActual('modulo-productos')} // <--- CONEXIÓN CON EL DASHBOARD
+              irAApps={() => setPantallaActual('centro-apps')}
+              irAProductos={() => setPantallaActual('modulo-productos')}
+              irAPrecios={() => setPantallaActual('modulo-precios')} // <--- CONEXIÓN DE PRECIOS
             />
           ) : pantallaActual === 'configuracion' ? (
-            <Configuracion 
+            <Configuracion
               alVolver={() => setPantallaActual('dashboard')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
             />
           ) : pantallaActual === 'proveedores' ? (
-            <Proveedores 
+            <Proveedores
               alVolver={() => setPantallaActual('dashboard')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
               irANuevoProveedor={() => {
                 setProveedorEditando(null);
@@ -56,41 +58,45 @@ function App() {
                 setProveedorEditando(prov);
                 setPantallaActual('formulario-proveedor');
               }}
-              irADetalleProveedor={(prov) => { 
+              irADetalleProveedor={(prov) => {
                 setProveedorViendo(prov);
                 setPantallaActual('detalle-proveedor');
               }}
             />
           ) : pantallaActual === 'formulario-proveedor' ? (
-            <FormularioProveedor 
+            <FormularioProveedor
               alVolver={() => setPantallaActual('proveedores')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
               proveedorAEditar={proveedorEditando}
             />
           ) : pantallaActual === 'detalle-proveedor' ? (
-            <DetalleProveedor 
+            <DetalleProveedor
               alVolver={() => setPantallaActual('proveedores')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
               proveedor={proveedorViendo}
             />
-          ): pantallaActual === 'boveda' ? (
-            <BovedaFacturas 
+          ) : pantallaActual === 'boveda' ? (
+            <BovedaFacturas
               alVolver={() => setPantallaActual('dashboard')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
             />
-          ): pantallaActual === 'importador' ? (
-            <Importador 
+          ) : pantallaActual === 'importador' ? (
+            <Importador
               alVolver={() => setPantallaActual('dashboard')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
               irAProveedores={() => setPantallaActual('proveedores')}
             />
           ) : pantallaActual === 'modulo-correos' ? (
-            <ModuloCorreos 
+            <ModuloCorreos
               alVolver={() => setPantallaActual('dashboard')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
             />
           ) : pantallaActual === 'centro-apps' ? ( // <--- RENDERIZADO DE LA NUEVA PANTALLA
-            <CentroApps 
-              volverAlDashboard={() => setPantallaActual('dashboard')} 
+            <CentroApps
+              volverAlDashboard={() => setPantallaActual('dashboard')}
             />
-          ) : pantallaActual === 'modulo-productos' ? ( // <--- RENDERIZADO DEL MÓDULO DE PRODUCTOS
-            <ModuloProductos 
-              volverAlDashboard={() => setPantallaActual('dashboard')} 
+          ) : pantallaActual === 'modulo-productos' ? (
+            <ModuloProductos
+              volverAlDashboard={() => setPantallaActual('dashboard')}
+            />
+          ) : pantallaActual === 'modulo-precios' ? ( // <--- RENDERIZADO DEL MÓDULO DE PRECIOS
+            <ModuloPrecios
+              volverAlDashboard={() => setPantallaActual('dashboard')}
             />
           ) : null
         )}

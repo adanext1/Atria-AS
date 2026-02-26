@@ -1895,6 +1895,165 @@ ipcMain.handle('desagrupar-producto', async (event, { rfc_proveedor, nombre_en_x
   }
 });
 
+// =========================================================================
+// FASE 14: CENTRO DE ANALÍTICAS Y EVOLUCIÓN DE PRECIOS
+// =========================================================================
+ipcMain.handle('obtener-analiticas-precios', async () => {
+  try {
+    const config = store.get('userConfig');
+    if (!config || !config.rutaDestino) return { success: false, error: 'Ruta no configurada' };
+
+    const rutaMaestro = path.join(config.rutaDestino, 'productos_maestros.json');
+    const rutaMapeos = path.join(config.rutaDestino, 'mapeos_sistema.json');
+    const carpetaProveedores = path.join(config.rutaDestino, 'Proveedores');
+
+    if (!fs.existsSync(rutaMaestro) || !fs.existsSync(rutaMapeos)) {
+      return { success: false, error: 'No hay catálogo maestro auditado todavía.' };
+    }
+
+    const maestro = JSON.parse(fs.readFileSync(rutaMaestro, 'utf8'));
+    const mapeos = JSON.parse(fs.readFileSync(rutaMapeos, 'utf8'));
+
+    // 1. Cargar en memoria todos los JSON de `registro_productos.json` usando sus carpetas
+    const datosProveedoresCache = {};
+    if (fs.existsSync(carpetaProveedores)) {
+      const carpetas = fs.readdirSync(carpetaProveedores, { withFileTypes: true });
+      for (const dir of carpetas) {
+        if (dir.isDirectory()) {
+          const rutaProd = path.join(carpetaProveedores, dir.name, 'registro_productos.json');
+          const rutaPerfil = path.join(carpetaProveedores, dir.name, 'perfil.json');
+          if (fs.existsSync(rutaProd) && fs.existsSync(rutaPerfil)) {
+            const perfilRaw = JSON.parse(fs.readFileSync(rutaPerfil, 'utf8'));
+            const rfcProveedor = perfilRaw.rfc ? perfilRaw.rfc.trim() : dir.name;
+            const nombreProveedor = perfilRaw.nombre ? perfilRaw.nombre.trim() : dir.name;
+
+            datosProveedoresCache[rfcProveedor] = {
+              nombreCarpeta: dir.name,
+              nombreComercial: nombreProveedor,
+              productos: JSON.parse(fs.readFileSync(rutaProd, 'utf8'))
+            };
+          }
+        }
+      }
+    }
+
+    // 2. Armar la gran matriz de analíticas
+
+    const analiticas = [];
+    const agrupadosPorMaestro = {};
+    const productosAislados = [];
+
+    // Recorrer todos los proveedores en caché como base principal
+    for (const [rfc_proveedor, provData] of Object.entries(datosProveedoresCache)) {
+      if (!provData.productos) continue;
+
+      for (const [nombre_original, itemPuro] of Object.entries(provData.productos)) {
+        // Buscar si este producto está mapeado permitiendo múltiples llaves (RFC, Comercial, Carpeta)
+        const mapeoBase = mapeos.find(m =>
+          (m.rfc_proveedor === rfc_proveedor || m.rfc_proveedor === provData.nombreCarpeta || m.rfc_proveedor === provData.nombreComercial) &&
+          m.nombre_en_xml === nombre_original
+        );
+
+        const infoProvedorVinculado = {
+          rfc: rfc_proveedor,
+          nombre_comercial: provData.nombreComercial || rfc_proveedor,
+          nombre_original: nombre_original,
+          precioActual: itemPuro.precioActual || 0
+        };
+
+        const historialFirmado = (itemPuro.historial && Array.isArray(itemPuro.historial))
+          ? itemPuro.historial.map(hito => ({
+            ...hito,
+            rfc_proveedor: rfc_proveedor,
+            nombre_comercial: provData.nombreComercial || rfc_proveedor,
+            nombre_original: nombre_original
+          }))
+          : [];
+
+        if (mapeoBase && maestro[mapeoBase.master_id] && maestro[mapeoBase.master_id].vector !== 'EXCLUIDO') {
+          // Producto agrupado/homologado por la IA
+          const id_maestro = mapeoBase.master_id;
+          if (!agrupadosPorMaestro[id_maestro]) {
+            agrupadosPorMaestro[id_maestro] = {
+              id_maestro: id_maestro,
+              nombre_global: maestro[id_maestro].nombre_limpio,
+              auditado: maestro[id_maestro].auditado,
+              proveedoresInvolucrados: new Set(),
+              proveedores_vinculados: [],
+              historialUnificado: []
+            };
+          }
+          agrupadosPorMaestro[id_maestro].proveedoresInvolucrados.add(rfc_proveedor);
+          agrupadosPorMaestro[id_maestro].proveedores_vinculados.push(infoProvedorVinculado);
+          agrupadosPorMaestro[id_maestro].historialUnificado = agrupadosPorMaestro[id_maestro].historialUnificado.concat(historialFirmado);
+        } else {
+          // Producto Aislado o de Proveedor sin IA
+          const crypto = require('crypto');
+          const id_aislado = 'aislado-' + crypto.createHash('md5').update(rfc_proveedor + nombre_original).digest('hex').substring(0, 10);
+          productosAislados.push({
+            id_maestro: id_aislado,
+            nombre_global: nombre_original,
+            auditado: false,
+            proveedoresInvolucrados: new Set([rfc_proveedor]),
+            proveedores_vinculados: [infoProvedorVinculado],
+            historialUnificado: historialFirmado
+          });
+        }
+      }
+    }
+
+    // Constructor de métricas finales
+    function procesarKPIsYEmitir(objData, arrayFinal) {
+      objData.historialUnificado.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+      let precioMin = Infinity;
+      let precioMax = -Infinity;
+      let ultimoPrecio = 0;
+      let primerPrecio = 0;
+      let variacionPorcentualTotal = 0;
+
+      if (objData.historialUnificado.length > 0) {
+        primerPrecio = objData.historialUnificado[0].precio;
+        ultimoPrecio = objData.historialUnificado[objData.historialUnificado.length - 1].precio;
+        objData.historialUnificado.forEach(h => {
+          if (h.precio < precioMin) precioMin = h.precio;
+          if (h.precio > precioMax) precioMax = h.precio;
+        });
+        if (primerPrecio > 0) variacionPorcentualTotal = ((ultimoPrecio - primerPrecio) / primerPrecio) * 100;
+      } else {
+        precioMin = 0;
+        precioMax = 0;
+      }
+
+      arrayFinal.push({
+        id_maestro: objData.id_maestro,
+        nombre_global: objData.nombre_global,
+        auditado: objData.auditado,
+        total_proveedores: objData.proveedoresInvolucrados.size,
+        proveedores_vinculados: objData.proveedores_vinculados,
+        kpis: {
+          precioMin,
+          precioMax,
+          ultimoPrecio,
+          variacionPorcentualTotal: parseFloat(variacionPorcentualTotal.toFixed(2))
+        },
+        historial_compuesto: objData.historialUnificado
+      });
+    }
+
+    // Inyectar ambos mundos al contenedor principal
+    Object.values(agrupadosPorMaestro).forEach(grupo => procesarKPIsYEmitir(grupo, analiticas));
+    productosAislados.forEach(aislado => procesarKPIsYEmitir(aislado, analiticas));
+
+    // Ordenar de forma alfabética (o podría ser por los que más variación sufrieron)
+    analiticas.sort((a, b) => a.nombre_global.localeCompare(b.nombre_global));
+
+    return { success: true, analiticas };
+  } catch (error) {
+    console.error("Error Obteniendo Analíticas:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });

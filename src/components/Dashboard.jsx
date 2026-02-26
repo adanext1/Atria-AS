@@ -1,16 +1,16 @@
-export default function Dashboard({ alCerrarSesion, modoOscuro, toggleTema, irAConfiguracion, irAProveedores, irABoveda, irAImportador, irAlCorreo, irAApps, irAProductos }) {
+export default function Dashboard({ alCerrarSesion, modoOscuro, toggleTema, irAConfiguracion, irAProveedores, irABoveda, irAImportador, irAlCorreo, irAApps, irAProductos, irAPrecios }) {
   return (
     <div className="min-h-screen p-4 md:p-8 font-sans max-w-7xl mx-auto">
-      
+
       {/* HEADER SUPERIOR */}
       <header className="animate-fade-in-up flex justify-between items-center mb-8 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 transition-colors">
         <div className="flex items-center gap-3">
           <div className="bg-blue-50 dark:bg-blue-900/40 p-2 rounded-xl">
             <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
           </div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-white">Mi Facturación</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-white">Centro de Control</h1>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <button onClick={toggleTema} className="p-2 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition font-medium text-sm">
             {modoOscuro ? '☀️ Claro' : '🌙 Oscuro'}
@@ -28,7 +28,7 @@ export default function Dashboard({ alCerrarSesion, modoOscuro, toggleTema, irAC
         {/* 1. CARD: IMPORTADOR (LA NUEVA ESTRELLA) */}
         <div onClick={irAImportador} className="group bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-3xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden lg:col-span-2">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-          
+
           <div className="flex items-center justify-between mb-4 relative z-10">
             <div className="bg-white/20 p-4 rounded-2xl text-white backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
@@ -147,7 +147,23 @@ export default function Dashboard({ alCerrarSesion, modoOscuro, toggleTema, irAC
           </div>
           <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Centro de Productos</h3>
           <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">
-           Catálogo maestro y homologación avanzada de productos mediante análisis semántico.
+            Catálogo maestro y homologación avanzada de productos mediante análisis semántico.
+          </p>
+        </div>
+
+        {/* OCTAVA CARD: INTELIGENCIA DE PRECIOS */}
+        <div onClick={irAPrecios} className="group bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+          <div className="flex items-center justify-between mb-4">
+            <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-2xl text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+            </div>
+            <span className="text-gray-400 dark:text-slate-500 group-hover:text-indigo-500 transition-colors">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+            </span>
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Analítica de Precios</h3>
+          <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">
+            Compara y traza la evolución histórica del costo de tus insumos en el mercado de proveedores.
           </p>
         </div>
 
