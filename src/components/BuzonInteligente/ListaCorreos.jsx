@@ -18,7 +18,7 @@ const getColorPorRemitente = (email) => {
 };
 
 export default function ListaCorreos({ correosLista, correoSeleccionado, seleccionados, setSeleccionados, seleccionarYDescargar, detallesCorreo, setCorreoSeleccionado, importando, progresoImportacion, procesarImportacion, escaneando, cargarMasCorreos }) {
-  
+
   if (correosLista.length === 0) {
     return (
       <div className="flex flex-col h-full w-full max-w-2xl mx-auto items-center justify-center text-center animate-fade-in-up">
@@ -41,7 +41,7 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
 
   return (
     <div className={`flex flex-col h-full transition-all duration-500 ease-in-out ${correoSeleccionado ? 'w-full lg:w-5/12' : 'w-full max-w-5xl mx-auto'}`}>
-      
+
       {/* BARRA DE ACCIONES MASIVAS */}
       <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 mb-4 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-2 lg:gap-3">
@@ -49,7 +49,7 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
           <span className="text-xs lg:text-sm font-bold text-gray-500 dark:text-gray-400">Todo</span>
         </div>
         <div className={`flex gap-2 transition-opacity duration-300 ${seleccionados.length > 0 ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-          <button 
+          <button
             onClick={procesarImportacion}
             disabled={importando}
             className={`px-4 py-1.5 rounded-lg text-xs font-bold shadow-md transition flex items-center gap-1.5 ${importando ? 'bg-purple-600 text-white cursor-wait' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'}`}
@@ -61,7 +61,7 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
               </>
             ) : (
               <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> 
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                 Importar Seleccionados
               </>
             )}
@@ -77,7 +77,7 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
 
           return (
             <div key={correo.id} className="flex flex-col">
-              <div 
+              <div
                 onClick={() => seleccionarYDescargar(correo)}
                 className={`rounded-2xl p-4 border transition-all cursor-pointer flex items-start gap-3 lg:gap-4 group 
                   ${estaActivo ? `${colorP.light} ${colorP.darkBg} ${colorP.border} ${colorP.darkBorder} shadow-md transform scale-[1.01] lg:scale-100` : `bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:shadow-sm ${colorP.hover}`}`}
@@ -99,9 +99,21 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
                       {correo.tienePdf && <span className="flex items-center gap-1 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-black tracking-wider uppercase border border-red-200 dark:border-red-800/50">PDF</span>}
                       {!correo.tieneXml && !correo.tienePdf && <span className="flex items-center gap-1 bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400 px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-bold tracking-wider uppercase">Solo Texto</span>}
                     </div>
-                    {correo.total && correo.total !== 'Por calcular' && (
-                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md">{correo.total}</span>
-                    )}
+
+                    {/* LÓGICA DE DERECHA: Si tiene total, lo mostramos. Si es solo PDF seleccionado y descargado, mostramos botón Añadir */}
+                    <div className="flex items-center gap-2">
+                      {(!correo.tieneXml && correo.tienePdf && estaActivo && detallesCorreo.pdfData && !detallesCorreo.xmlInfo) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); abrirModalPDFManual(correoSeleccionado); }}
+                          className="text-[10px] font-bold text-white bg-orange-500 hover:bg-orange-600 px-2 py-1 rounded shadow-sm transition transform hover:scale-105"
+                        >
+                          ✏️ Añadir Datos
+                        </button>
+                      )}
+                      {(correo.total && correo.total !== 'Por calcular') && (
+                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md">{correo.total}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -109,11 +121,11 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
               {/* MODO ACORDEÓN PARA CELULARES */}
               {estaActivo && (
                 <div className="block lg:hidden w-full cursor-default pb-2">
-                  <VistaPrevia 
-                    correoSeleccionado={correoSeleccionado} 
-                    setCorreoSeleccionado={setCorreoSeleccionado} 
-                    detallesCorreo={detallesCorreo} 
-                    esModoAcordeon={true} 
+                  <VistaPrevia
+                    correoSeleccionado={correoSeleccionado}
+                    setCorreoSeleccionado={setCorreoSeleccionado}
+                    detallesCorreo={detallesCorreo}
+                    esModoAcordeon={true}
                   />
                 </div>
               )}
@@ -124,7 +136,7 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
         {/* BOTÓN CARGAR MÁS CORREOS */}
         {correosLista.length > 0 && (
           <div className="p-4 mt-2 flex justify-center border-t border-gray-100 dark:border-slate-700/50">
-            <button 
+            <button
               onClick={cargarMasCorreos}
               disabled={escaneando}
               className="px-6 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"

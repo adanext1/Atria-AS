@@ -11,43 +11,46 @@ import ConfiguracionCuentas from './ConfiguracionCuentas';
 
 export default function BuzonInteligente({ alVolver, modoOscuro, toggleTema }) {
   // ESTADOS PRINCIPALES
-  const [pestanaActiva, setPestanaActiva] = useState('bandeja'); 
+  const [pestanaActiva, setPestanaActiva] = useState('bandeja');
   const [correoSeleccionado, setCorreoSeleccionado] = useState(null);
   const [seleccionados, setSeleccionados] = useState([]);
-  const [correosLista, setCorreosLista] = useState([]); 
-  const [escaneando, setEscaneando] = useState(false); 
+  const [correosLista, setCorreosLista] = useState([]);
+  const [escaneando, setEscaneando] = useState(false);
   const [detallesCorreo, setDetallesCorreo] = useState({ cargando: false, archivos: [], xmlInfo: null, pdfData: null });
-  const [carpetasNube, setCarpetasNube] = useState([]); 
+  const [carpetasNube, setCarpetasNube] = useState([]);
   // ESTADOS DE IMPORTACIÓN EN LOTE
   const [importando, setImportando] = useState(false);
   const [progresoImportacion, setProgresoImportacion] = useState({ actual: 0, total: 0 });
   const [modalExito, setModalExito] = useState({ abierto: false, cantidad: 0 });
 
+  // ESTADO NUEVO: Modal para rellenar datos de un correo puro PDF
+  const [pdfVacioAEditar, setPdfVacioAEditar] = useState(null);
+
   const [limiteCorreos, setLimiteCorreos] = useState(15); // Empezamos cargando 15 por defecto
 
   // Esta función se llama cuando agregas o cambias de cuenta
-const recargarSistemaCompleto = () => {
-  setCacheCorreos({}); // Limpiamos la memoria de la cuenta anterior
-  setCorreosLista([]);
+  const recargarSistemaCompleto = () => {
+    setCacheCorreos({}); // Limpiamos la memoria de la cuenta anterior
+    setCorreosLista([]);
 
-  // Leemos quién es el nuevo jefe
-  ipcRenderer.invoke('obtener-config-imap').then(configGuardada => {
-    if (configGuardada && configGuardada.user) {
-      setImapConfig(configGuardada);
-      // Pedimos las carpetas de la NUEVA cuenta
-      ipcRenderer.invoke('obtener-carpetas-imap').then(res => {
-        if (res.success) setCarpetasNube(res.carpetas);
-      });
-      setPestanaActiva('bandeja'); // Brincamos al Inbox nuevo
-    } else {
-      setPestanaActiva('configuracion'); // Si borró todo, lo mandamos a configurar
-    }
-  });
-};
+    // Leemos quién es el nuevo jefe
+    ipcRenderer.invoke('obtener-config-imap').then(configGuardada => {
+      if (configGuardada && configGuardada.user) {
+        setImapConfig(configGuardada);
+        // Pedimos las carpetas de la NUEVA cuenta
+        ipcRenderer.invoke('obtener-carpetas-imap').then(res => {
+          if (res.success) setCarpetasNube(res.carpetas);
+        });
+        setPestanaActiva('bandeja'); // Brincamos al Inbox nuevo
+      } else {
+        setPestanaActiva('configuracion'); // Si borró todo, lo mandamos a configurar
+      }
+    });
+  };
   // =================================================================
   // NUEVO: LA MEMORIA CACHÉ (Evita recargar al cambiar de carpeta)
   // =================================================================
-  const [cacheCorreos, setCacheCorreos] = useState({}); 
+  const [cacheCorreos, setCacheCorreos] = useState({});
 
   // ESTADOS DE IMAP (Preparándonos para las Multi-Cuentas)
   const [cuentasGuardadas, setCuentasGuardadas] = useState([]); // Próximamente guardará varias cuentas
@@ -62,13 +65,13 @@ const recargarSistemaCompleto = () => {
       if (configGuardada && configGuardada.user) {
         setImapConfig(configGuardada);
         setCuentasGuardadas([configGuardada]); // Próximamente guardará varias cuentas
-        
+
         // ¡AQUÍ ESTÁ EL CAMBIO! Le mandamos 'false' para que use el disco duro
         ipcRenderer.invoke('obtener-carpetas-imap', false).then(res => {
           if (res.success) setCarpetasNube(res.carpetas);
         });
       } else {
-        setPestanaActiva('configuracion'); 
+        setPestanaActiva('configuracion');
       }
     });
   }, []);
@@ -83,11 +86,11 @@ const recargarSistemaCompleto = () => {
     if (!forzarRecarga && cacheCorreos[carpetaImap]) {
       setCorreosLista(cacheCorreos[carpetaImap]);
       setCorreoSeleccionado(null); setSeleccionados([]);
-      return; 
+      return;
     }
 
     setEscaneando(true);
-    if (!cacheCorreos[carpetaImap]) setCorreosLista([]); 
+    if (!cacheCorreos[carpetaImap]) setCorreosLista([]);
     // --- NUEVO: SI FORZAMOS RECARGA DE CORREOS, TAMBIÉN RECARGAMOS CARPETAS ---
     if (forzarRecarga) {
       ipcRenderer.invoke('obtener-carpetas-imap', true).then(res => {
@@ -98,9 +101,9 @@ const recargarSistemaCompleto = () => {
     try {
       // Le mandamos el número exacto de correos que queremos traer
       const resultado = await ipcRenderer.invoke('escanear-correos', limiteAUsar, carpetaImap, forzarRecarga);
-      
+
       if (resultado.success) {
-        setCorreosLista(resultado.correos); 
+        setCorreosLista(resultado.correos);
         setCacheCorreos(prev => ({ ...prev, [carpetaImap]: resultado.correos }));
         setCorreoSeleccionado(null); setSeleccionados([]);
       } else {
@@ -117,7 +120,7 @@ const recargarSistemaCompleto = () => {
     const nuevoLimite = limiteCorreos + 15; // Sumamos 15 más a la cuenta
     setLimiteCorreos(nuevoLimite);
     // Forzamos ir a Google (true) para que traiga los viejos y actualice el caché
-    escanearBandeja(pestanaActiva, true, nuevoLimite); 
+    escanearBandeja(pestanaActiva, true, nuevoLimite);
   };
 
   // Efecto que se dispara al cambiar de carpeta en el menú izquierdo
@@ -133,10 +136,10 @@ const recargarSistemaCompleto = () => {
   // =================================================================
   const procesarImportacion = async () => {
     if (seleccionados.length === 0) return;
-    
+
     setImportando(true);
     setProgresoImportacion({ actual: 0, total: seleccionados.length });
-    
+
     const carpetaImap = pestanaActiva === 'bandeja' ? 'INBOX' : pestanaActiva;
     let exitos = 0; // AQUÍ SÍ EXISTE LA VARIABLE
 
@@ -146,13 +149,13 @@ const recargarSistemaCompleto = () => {
 
       try {
         const res = await ipcRenderer.invoke('descargar-adjuntos-correo', uid, carpetaImap);
-        
+
         if (res.success && res.xmlInfo) {
           const guardado = await ipcRenderer.invoke('guardar-factura-erp', {
             archivos: res.archivos,
             xmlInfo: res.xmlInfo
           });
-          
+
           // 🛡️ Si tuvo éxito O era un duplicado (ya lo tenías), lo cuenta como victoria y sigue avanzando
           if (guardado.success || guardado.error === 'DUPLICADO') {
             exitos++;
@@ -162,23 +165,23 @@ const recargarSistemaCompleto = () => {
     }
 
     setModalExito({ abierto: true, cantidad: exitos });
-    setSeleccionados([]); 
+    setSeleccionados([]);
     setImportando(false);
   };
 
- // =================================================================
+  // =================================================================
   // IMPORTACIÓN INDIVIDUAL (Desde el botón morado de la Vista Previa)
   // =================================================================
   const importarCorreoActual = async () => {
     if (!correoSeleccionado || !detallesCorreo.xmlInfo) return;
-    
+
     setImportando(true);
     try {
       const guardado = await ipcRenderer.invoke('guardar-factura-erp', {
         archivos: detallesCorreo.archivos,
         xmlInfo: detallesCorreo.xmlInfo
       });
-      
+
       if (guardado.success) {
         setModalExito({ abierto: true, cantidad: 1 });
       } else {
@@ -186,11 +189,55 @@ const recargarSistemaCompleto = () => {
         if (guardado.error === 'DUPLICADO') {
           alert('⚠️ ¡Atención! Esta factura ya se encuentra registrada en el sistema de este proveedor.');
         } else {
-          alert('Error al guardar: ' + guardado.error); 
+          alert('Error al guardar: ' + guardado.error);
         }
       }
     } catch (error) {
       alert('Error crítico de conexión al guardar.');
+    }
+    setImportando(false);
+  };
+
+  // NUEVA FUNCIÓN: Guardar la captura manual desde el modal flotante
+  const guardarCapturaPDFManual = async (e) => {
+    e.preventDefault();
+    if (!pdfVacioAEditar) return;
+
+    setImportando(true);
+    const formData = new FormData(e.target);
+    const proveedor = formData.get('proveedor').trim() || 'Desconocido';
+    const rfc = formData.get('rfc').trim() || 'XAXX010101000';
+    const folio = formData.get('folio').trim() || `S/F-${Date.now().toString().slice(-4)}`;
+    const total = parseFloat(formData.get('total')) || 0;
+    const fecha = formData.get('fecha') || new Date().toISOString().split('T')[0];
+
+    // Simulamos un xmlInfo para engañar sanamente al backend
+    const xmlInfoInyectado = {
+      nombreEmisor: proveedor,
+      rfcEmisor: rfc,
+      folio: folio,
+      total: total.toString(),
+      moneda: 'MXN'
+    };
+
+    try {
+      const guardado = await ipcRenderer.invoke('guardar-factura-erp', {
+        archivos: detallesCorreo.archivos, // Los PDFs descargados que enviaron
+        xmlInfo: xmlInfoInyectado
+      });
+
+      if (guardado.success) {
+        setPdfVacioAEditar(null);
+        setModalExito({ abierto: true, cantidad: 1 });
+      } else {
+        if (guardado.error === 'DUPLICADO') {
+          alert('⚠️ ¡Atención! Esta factura ya se encuentra registrada en el sistema.');
+        } else {
+          alert('Error al guardar: ' + guardado.error);
+        }
+      }
+    } catch (error) {
+      alert('Error crítico al procesar PDF manual.');
     }
     setImportando(false);
   };
@@ -209,15 +256,15 @@ const recargarSistemaCompleto = () => {
       try {
         const carpetaImap = pestanaActiva === 'bandeja' ? 'INBOX' : pestanaActiva;
         const resultado = await ipcRenderer.invoke('descargar-adjuntos-correo', correo.id, carpetaImap);
-        
+
         if (resultado.success) {
           setDetallesCorreo({ cargando: false, archivos: resultado.archivos, xmlInfo: resultado.xmlInfo, pdfData: resultado.pdfData });
-          
+
           if (resultado.xmlInfo?.total) {
-             // Actualizamos el total tanto en la lista visual como en el caché
-             const correosActualizados = correosLista.map(c => c.id === correo.id ? { ...c, total: `$${resultado.xmlInfo.total} ${resultado.xmlInfo.moneda}` } : c);
-             setCorreosLista(correosActualizados);
-             setCacheCorreos(prev => ({ ...prev, [carpetaImap]: correosActualizados }));
+            // Actualizamos el total tanto en la lista visual como en el caché
+            const correosActualizados = correosLista.map(c => c.id === correo.id ? { ...c, total: `$${resultado.xmlInfo.total} ${resultado.xmlInfo.moneda}` } : c);
+            setCorreosLista(correosActualizados);
+            setCacheCorreos(prev => ({ ...prev, [carpetaImap]: correosActualizados }));
           }
         } else {
           alert('Error del Servidor: ' + resultado.error);
@@ -260,19 +307,19 @@ const recargarSistemaCompleto = () => {
       </header>
 
       <div className="flex flex-1 overflow-hidden h-full">
-        <SidebarCarpetas 
-          pestanaActiva={pestanaActiva} 
-          setPestanaActiva={setPestanaActiva} 
-          setCorreoSeleccionado={setCorreoSeleccionado} 
-          correosLista={correosLista} 
+        <SidebarCarpetas
+          pestanaActiva={pestanaActiva}
+          setPestanaActiva={setPestanaActiva}
+          setCorreoSeleccionado={setCorreoSeleccionado}
+          correosLista={correosLista}
           carpetasNube={carpetasNube}
           abrirModalEnlazar={(carpeta) => { setCarpetaParaEnlazar(carpeta); setModalEnlazarAbierto(true); }}
         />
-        
+
         <main className="flex-1 flex overflow-hidden p-3 lg:p-4 gap-4 bg-gray-50/50 dark:bg-[#0f141e]">
           {pestanaActiva !== 'configuracion' && (
             <>
-              <ListaCorreos 
+              <ListaCorreos
                 correosLista={correosLista}
                 correoSeleccionado={correoSeleccionado}
                 seleccionados={seleccionados}
@@ -292,12 +339,13 @@ const recargarSistemaCompleto = () => {
 
               {correoSeleccionado && (
                 <div className="hidden lg:flex flex-col w-7/12 h-full">
-                  <VistaPrevia 
+                  <VistaPrevia
                     correoSeleccionado={correoSeleccionado}
                     setCorreoSeleccionado={setCorreoSeleccionado}
                     detallesCorreo={detallesCorreo}
-                    importarCorreoActual={importarCorreoActual} // <--- NUEVO PODER
-                    importando={importando}                     // <--- NUEVO PODER
+                    importarCorreoActual={importarCorreoActual}
+                    importando={importando}
+                    abrirModalPDFManual={() => setPdfVacioAEditar(correoSeleccionado)} // <--- CONEXIÓN AL MODAL
                   />
                 </div>
               )}
@@ -309,12 +357,12 @@ const recargarSistemaCompleto = () => {
           )}
         </main>
       </div>
-      
+
       <ModalCapturaManual />
-      <ModalEnlazar 
-        isOpen={modalEnlazarAbierto} 
-        onClose={() => setModalEnlazarAbierto(false)} 
-        carpeta={carpetaParaEnlazar} 
+      <ModalEnlazar
+        isOpen={modalEnlazarAbierto}
+        onClose={() => setModalEnlazarAbierto(false)}
+        carpeta={carpetaParaEnlazar}
       />
 
       {/* =========================================================
@@ -330,8 +378,8 @@ const recargarSistemaCompleto = () => {
             <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-8 leading-relaxed">
               Se guardaron <span className="font-black text-emerald-600 dark:text-emerald-400 text-lg mx-1">{modalExito.cantidad}</span> facturas correctamente en tu base de datos y directorio de proveedores.
             </p>
-            <button 
-              onClick={() => setModalExito({ abierto: false, cantidad: 0 })} 
+            <button
+              onClick={() => setModalExito({ abierto: false, cantidad: 0 })}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/30 transition-all transform hover:-translate-y-0.5"
             >
               Aceptar y Continuar
@@ -339,6 +387,98 @@ const recargarSistemaCompleto = () => {
           </div>
         </div>
       )}
+
+      {/* =========================================================
+          MODAL: RELLENAR DATOS DE PDF HUÉRFANO (NUEVO)
+          ========================================================= */}
+      {pdfVacioAEditar && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in-up">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-slate-700 relative">
+            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Completar Datos del PDF</h3>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">
+              Este correo solo contiene un PDF sin XML. Llena los datos para registrar el gasto en el sistema.
+            </p>
+
+            <form onSubmit={guardarCapturaPDFManual} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Proveedor / Remitente</label>
+                <input
+                  type="text"
+                  name="proveedor"
+                  required
+                  defaultValue={pdfVacioAEditar.empresa || pdfVacioAEditar.remitente}
+                  className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">RFC (Opcional)</label>
+                  <input
+                    type="text"
+                    name="rfc"
+                    placeholder="XAXX010101000"
+                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Folio Factura</label>
+                  <input
+                    type="text"
+                    name="folio"
+                    required
+                    placeholder="Ej: F-10293"
+                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Monto Total ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="total"
+                    required
+                    placeholder="0.00"
+                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Fecha</label>
+                  <input
+                    type="date"
+                    name="fecha"
+                    required
+                    defaultValue={new Date().toISOString().split('T')[0]} // Fecha de hoy
+                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setPdfVacioAEditar(null)}
+                  disabled={importando}
+                  className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={importando}
+                  className={`px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition transform ${importando ? 'bg-orange-400 cursor-wait' : 'bg-orange-600 hover:bg-orange-700 hover:-translate-y-0.5'}`}
+                >
+                  {importando ? 'Guardando...' : 'Guardar Datos Ocultos'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

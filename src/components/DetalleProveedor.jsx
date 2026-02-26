@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 const { ipcRenderer } = window.require('electron');
 
 export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, proveedor }) {
-  
+
   const [facturas, setFacturas] = useState([]);
   const [bitacora, setBitacora] = useState([]);
   const [productos, setProductos] = useState({});
@@ -60,6 +60,15 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
     if (!resultado.success) alert(`Error al abrir archivo: ${resultado.error}`);
   };
 
+  const abrirFacturaOriginal = async (fac) => {
+    const resultado = await ipcRenderer.invoke('abrir-factura-original', {
+      nombreProveedor: proveedor.nombre,
+      fecha: fac.fecha,
+      folio: fac.folio
+    });
+    if (!resultado.success) alert(resultado.error);
+  };
+
   // =========================================================
   // FUNCIÓN: PREPARAR MODAL PARA ADJUNTAR (EL BOTÓN "+")
   // =========================================================
@@ -83,7 +92,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
     }
 
     let resultado;
-    
+
     // Si es Nota de Crédito, usamos el súper poder 3. Si no, el súper poder 2.
     if (datosAdjunto.tipoDoc === 'NC') {
       if (!datosAdjunto.montoNC || parseFloat(datosAdjunto.montoNC) <= 0) {
@@ -110,12 +119,12 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
     if (resultado.success) {
       setModalAdjuntoAbierto(false);
       await cargarDatosCompletos(); // Recarga la tabla para que el "+" se convierta en "ojito"
-      
+
       // Si fue nota de crédito, actualizamos la deuda principal visualmente al instante
       if (datosAdjunto.tipoDoc === 'NC') {
         setDeudaLocal(prev => Math.max(0, prev - parseFloat(datosAdjunto.montoNC)));
       }
-      
+
       alert('Operación registrada exitosamente.');
     } else {
       alert(`Ocurrió un error: ${resultado.error}`);
@@ -133,7 +142,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
     if (datosPago.comprobanteArchivo) {
       base64 = await fileToBase64(datosPago.comprobanteArchivo);
       const nombrePartes = datosPago.comprobanteNombre.split('.');
-      ext = '.' + nombrePartes[nombrePartes.length - 1]; 
+      ext = '.' + nombrePartes[nombrePartes.length - 1];
     }
     const resultado = await ipcRenderer.invoke('registrar-pago', {
       nombreProveedor: proveedor.nombre, facturasSeleccionadas: facturasSeleccionadas,
@@ -161,7 +170,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
       await cargarDatosCompletos();
       const perfilActualizado = await ipcRenderer.invoke('obtener-proveedores');
       const esteProv = perfilActualizado.find(p => p.nombre === proveedor.nombre);
-      if(esteProv) setDeudaLocal(esteProv.metricas.deudaActual);
+      if (esteProv) setDeudaLocal(esteProv.metricas.deudaActual);
       setAnimarGrafica(false); setTimeout(() => setAnimarGrafica(true), 100);
     } else {
       alert(`Error al sincronizar: ${resultado.error}`);
@@ -178,7 +187,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
     setBitacora(bitacoraReal);
     setProductos(productosReales); // <--- GUARDAMOS LOS PRODUCTOS
     setCargando(false);
-    setTimeout(() => setAnimarGrafica(true), 100); 
+    setTimeout(() => setAnimarGrafica(true), 100);
   };
 
   useEffect(() => { cargarDatosCompletos(); }, [proveedor.nombre]);
@@ -202,8 +211,8 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
       mesesMap[mesNombre] = (mesesMap[mesNombre] || 0) + fac.monto;
     });
     const historial = Object.keys(mesesMap).map(mes => ({ mes, monto: mesesMap[mes] }));
-    const maxMonto = Math.max(...historial.map(d => d.monto), 1); 
-    return historial.map(d => ({ ...d, porcentajeAlto: Math.round((d.monto / maxMonto) * 100) })).reverse().slice(0, 6); 
+    const maxMonto = Math.max(...historial.map(d => d.monto), 1);
+    return historial.map(d => ({ ...d, porcentajeAlto: Math.round((d.monto / maxMonto) * 100) })).reverse().slice(0, 6);
   };
   const datosGrafica = generarDatosGrafica();
 
@@ -252,7 +261,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
 
   return (
     <div className="min-h-screen p-4 md:p-8 font-sans max-w-7xl mx-auto pb-20">
-      
+
       {/* HEADER TIPO TARJETA */}
       <header className="animate-fade-in-up bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 dark:bg-blue-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -273,7 +282,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
 
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
           <div className="w-24 h-24 bg-white dark:bg-[#0f141e] rounded-2xl border-2 border-gray-100 dark:border-slate-700 shadow-sm flex items-center justify-center p-2 overflow-hidden">
-             {proveedor.logo ? <img src={proveedor.logo} alt="Logo" className="max-w-full max-h-full object-contain" /> : <span className="text-3xl font-black text-gray-400 dark:text-slate-600">{proveedor.nombre.charAt(0)}</span>}
+            {proveedor.logo ? <img src={proveedor.logo} alt="Logo" className="max-w-full max-h-full object-contain" /> : <span className="text-3xl font-black text-gray-400 dark:text-slate-600">{proveedor.nombre.charAt(0)}</span>}
           </div>
           <div className="text-center md:text-left flex-1">
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white leading-tight">{proveedor.nombre}</h1>
@@ -296,7 +305,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
               <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 mb-1">Deuda Actual</p>
               <h3 className={`text-3xl font-bold transition-colors ${deudaLocal > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatearDinero(deudaLocal)}</h3>
             </div>
-             <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
+            <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
               <div className="flex justify-between items-end mb-1">
                 <p className="text-sm font-semibold text-gray-500 dark:text-slate-400">Crédito Libre</p>
                 {limiteCredito > 0 ? (<span className="text-xs font-bold text-blue-500">{Math.round(100 - porcentajeCredito)}%</span>) : (<span className="text-xs font-bold text-emerald-500">Ilimitado</span>)}
@@ -307,7 +316,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
               </div>
             </div>
             <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
-               <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
               <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 mb-1">Compras Históricas</p>
               <h3 className="text-2xl font-bold text-gray-800 dark:text-white">{formatearDinero(comprasTotales)}</h3>
             </div>
@@ -344,6 +353,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                     <th className="pb-3 pl-2 pt-2">Folio</th>
                     <th className="pb-3 pt-2">Fecha</th>
                     <th className="pb-3 text-right pt-2">Monto</th>
+                    <th className="pb-3 text-center pt-2" title="Factura Original">PDF</th>
                     <th className="pb-3 text-center pt-2" title="Comprobante">Comp.</th>
                     <th className="pb-3 text-center pt-2" title="REP (SAT)">REP</th>
                     <th className="pb-3 text-center pt-2" title="Nota de Crédito">N.C.</th>
@@ -351,7 +361,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {cargando ? <tr><td colSpan="7" className="text-center py-8">Cargando...</td></tr> : 
+                  {cargando ? <tr><td colSpan="7" className="text-center py-8">Cargando...</td></tr> :
                     facturas.map((fac, idx) => (
                       <tr key={idx} className="border-b border-gray-50 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-900/50 transition">
                         <td className="py-4 pl-2 font-mono font-medium text-gray-800 dark:text-gray-200 truncate max-w-[100px]" title={fac.folio}>{fac.folio}</td>
@@ -359,18 +369,26 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                         <td className="py-4 text-right font-bold text-gray-800 dark:text-white whitespace-nowrap">
                           {formatearDinero(fac.monto)}
                         </td>
-                        
+
+                        {/* NUEVO: FACTURA ORIGINAL */}
+                        <td className="py-4 align-middle">
+                          <div className="flex justify-center">
+                            <button onClick={() => abrirFacturaOriginal(fac)} title="Ver Factura Original" className="text-gray-400 hover:text-blue-500 bg-gray-50 hover:bg-blue-50 dark:bg-slate-700 dark:hover:bg-blue-900/30 p-1.5 rounded-lg transition hover:scale-110">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                            </button>
+                          </div>
+                        </td>
+
                         {/* BOTONES FUNCIONALES */}
                         <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'COMP')}</div></td>
                         <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'REP')}</div></td>
                         <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'NC')}</div></td>
 
                         <td className="py-4 pl-4 align-middle">
-                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap ${
-                            fac.estado === 'Pagada' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' :
-                            fac.estado === 'Esperando REP' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30' :
-                            'bg-red-100 text-red-700 dark:bg-red-900/30'
-                          }`}>
+                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap ${fac.estado === 'Pagada' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' :
+                              fac.estado === 'Esperando REP' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30' :
+                                'bg-red-100 text-red-700 dark:bg-red-900/30'
+                            }`}>
                             {fac.estado}
                           </span>
                         </td>
@@ -385,29 +403,29 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
           {/* NUEVA SECCIÓN: CATÁLOGO Y TENDENCIA DE PRECIOS            */}
           {/* ========================================================= */}
           <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm animate-fade-in-up delay-300">
-            
+
             {/* CABECERA CON BUSCADOR */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
                 Análisis de Precios ({Object.keys(productos).length} Conceptos)
               </h3>
-              
+
               {/* LA BARRA DE BÚSQUEDA */}
               <div className="relative w-full md:w-64">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
-                <input 
-                  type="text" 
-                  placeholder="Buscar producto..." 
+                <input
+                  type="text"
+                  placeholder="Buscar producto..."
                   value={busquedaProducto}
                   onChange={(e) => setBusquedaProducto(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-[#1a1f2b] text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-gray-800 dark:text-white transition-all"
                 />
               </div>
             </div>
-            
+
             <div className="overflow-x-auto max-h-96 overflow-y-auto">
               <table className="w-full text-left border-collapse">
                 <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
@@ -454,11 +472,11 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                             </td>
                           </tr>
                         );
-                    })
+                      })
                   )}
                   {/* Mensaje inteligente si la búsqueda no arroja resultados */}
                   {Object.keys(productos).length > 0 && Object.entries(productos).filter(([n]) => n.toLowerCase().includes(busquedaProducto.toLowerCase())).length === 0 && (
-                     <tr><td colSpan="4" className="text-center py-8 text-gray-500 font-medium">No se encontraron productos que coincidan con "{busquedaProducto}"</td></tr>
+                    <tr><td colSpan="4" className="text-center py-8 text-gray-500 font-medium">No se encontraron productos que coincidan con "{busquedaProducto}"</td></tr>
                   )}
                 </tbody>
               </table>
@@ -498,23 +516,23 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
       {/* BITÁCORA */}
       <div className="mt-8 animate-fade-in-up delay-500">
         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Historial de Actividad
+          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          Historial de Actividad
         </h3>
         <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden max-h-64 overflow-y-auto p-4">
-            {bitacora.length === 0 ? <p className="text-center text-gray-400 italic py-4">No hay actividad registrada.</p> : (
-                <ul className="space-y-3">
-                    {bitacora.map((ev, idx) => (
-                        <li key={idx} className="flex items-start gap-3 text-sm border-b border-gray-50 dark:border-slate-700/50 pb-3 last:border-0 last:pb-0">
-                            <span className="text-xl mt-0.5">{ev.icono}</span>
-                            <div className="flex-1">
-                                <p className="font-medium text-gray-800 dark:text-gray-200">{ev.descripcion}</p>
-                                <p className="text-xs text-gray-400 mt-0.5">{ev.fechaHora} • <span className="font-semibold uppercase">{ev.tipo}</span></p>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            )}
+          {bitacora.length === 0 ? <p className="text-center text-gray-400 italic py-4">No hay actividad registrada.</p> : (
+            <ul className="space-y-3">
+              {bitacora.map((ev, idx) => (
+                <li key={idx} className="flex items-start gap-3 text-sm border-b border-gray-50 dark:border-slate-700/50 pb-3 last:border-0 last:pb-0">
+                  <span className="text-xl mt-0.5">{ev.icono}</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-800 dark:text-gray-200">{ev.descripcion}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{ev.fechaHora} • <span className="font-semibold uppercase">{ev.tipo}</span></p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
@@ -528,7 +546,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
               <h2 className="text-xl font-black text-gray-800 dark:text-white flex items-center gap-2">Registrar Nuevo Pago</h2>
               <button onClick={() => setModalPagoAbierto(false)} className="text-gray-400 hover:text-red-500"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
               <div>
                 <h3 className="text-sm font-bold text-gray-500 dark:text-slate-400 mb-3 uppercase flex items-center gap-2">Facturas a saldar</h3>
@@ -573,20 +591,20 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Método de Pago</label>
-                    <select value={datosPago.metodo} onChange={(e) => setDatosPago({...datosPago, metodo: e.target.value})} className="w-full bg-white dark:bg-[#1a1f2b] border border-gray-200 dark:border-slate-600 rounded-xl p-3.5 text-sm outline-none">
+                    <select value={datosPago.metodo} onChange={(e) => setDatosPago({ ...datosPago, metodo: e.target.value })} className="w-full bg-white dark:bg-[#1a1f2b] border border-gray-200 dark:border-slate-600 rounded-xl p-3.5 text-sm outline-none">
                       <option value="Transferencia">Transferencia Bancaria</option><option value="Cheque">Cheque</option><option value="Efectivo">Efectivo</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">{datosPago.metodo === 'Efectivo' ? 'Entregado a:' : 'No. de Referencia'}</label>
-                    <input type="text" value={datosPago.referencia} onChange={(e) => setDatosPago({...datosPago, referencia: e.target.value})} className="w-full bg-white dark:bg-[#1a1f2b] border border-gray-200 dark:border-slate-600 rounded-xl p-3.5 text-sm outline-none" />
+                    <input type="text" value={datosPago.referencia} onChange={(e) => setDatosPago({ ...datosPago, referencia: e.target.value })} className="w-full bg-white dark:bg-[#1a1f2b] border border-gray-200 dark:border-slate-600 rounded-xl p-3.5 text-sm outline-none" />
                   </div>
                 </div>
                 {datosPago.metodo !== 'Efectivo' && (
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Adjuntar Comprobante (Opcional)</label>
                     <div className="relative w-full h-28 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-2xl flex flex-col items-center justify-center bg-gray-50/50 hover:bg-blue-50 cursor-pointer overflow-hidden group">
-                      <input type="file" accept=".pdf,image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if(e.target.files[0]) setDatosPago({...datosPago, comprobanteArchivo: e.target.files[0], comprobanteNombre: e.target.files[0].name}); }} />
+                      <input type="file" accept=".pdf,image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if (e.target.files[0]) setDatosPago({ ...datosPago, comprobanteArchivo: e.target.files[0], comprobanteNombre: e.target.files[0].name }); }} />
                       {datosPago.comprobanteNombre ? (
                         <div className="flex flex-col items-center text-emerald-600 font-bold"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg><span className="text-sm px-4 truncate max-w-[250px]">{datosPago.comprobanteNombre}</span></div>
                       ) : <span className="text-sm font-medium text-gray-400">Clickea o arrastra aquí tu PDF o captura</span>}
@@ -610,7 +628,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
       {modalAdjuntoAbierto && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-[#1e2433] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700/50 overflow-hidden transform animate-fade-in-up">
-            
+
             <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-700/50 flex justify-between items-center bg-gray-50/50">
               <h2 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2">
                 {datosAdjunto.tipoDoc === 'NC' ? 'Registrar Nota de Crédito' : `Adjuntar Documento (${datosAdjunto.tipoDoc})`}
@@ -627,7 +645,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
               {datosAdjunto.tipoDoc === 'NC' && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Monto de la Nota de Crédito ($)</label>
-                  <input type="number" step="0.01" value={datosAdjunto.montoNC} onChange={(e) => setDatosAdjunto({...datosAdjunto, montoNC: e.target.value})} placeholder="Ej. 1500.00" className="w-full bg-white dark:bg-[#1a1f2b] border border-gray-200 dark:border-slate-600 rounded-xl p-3.5 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-blue-500" />
+                  <input type="number" step="0.01" value={datosAdjunto.montoNC} onChange={(e) => setDatosAdjunto({ ...datosAdjunto, montoNC: e.target.value })} placeholder="Ej. 1500.00" className="w-full bg-white dark:bg-[#1a1f2b] border border-gray-200 dark:border-slate-600 rounded-xl p-3.5 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-blue-500" />
                   <p className="text-xs text-gray-400 mt-2">Este monto se restará de la deuda automáticamente.</p>
                 </div>
               )}
@@ -637,7 +655,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                   Archivo a adjuntar (PDF/Imagen) {datosAdjunto.tipoDoc !== 'NC' && <span className="text-red-500">*</span>}
                 </label>
                 <div className="relative w-full h-32 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-2xl flex flex-col items-center justify-center bg-gray-50/50 hover:bg-blue-50 cursor-pointer overflow-hidden group">
-                  <input type="file" accept=".pdf,image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if(e.target.files[0]) setDatosAdjunto({...datosAdjunto, archivo: e.target.files[0], nombreArchivo: e.target.files[0].name}); }} />
+                  <input type="file" accept=".pdf,image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if (e.target.files[0]) setDatosAdjunto({ ...datosAdjunto, archivo: e.target.files[0], nombreArchivo: e.target.files[0].name }); }} />
                   {datosAdjunto.nombreArchivo ? (
                     <div className="flex flex-col items-center text-emerald-600 font-bold"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg><span className="text-sm px-4 truncate max-w-[250px] mt-1">{datosAdjunto.nombreArchivo}</span></div>
                   ) : <span className="text-sm font-medium text-gray-400">Seleccionar o arrastrar archivo</span>}
@@ -660,7 +678,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
           <div className="bg-white dark:bg-[#1e2433] p-8 rounded-[32px] shadow-2xl flex flex-col items-center max-w-sm w-full animate-bounce-in border border-emerald-100 dark:border-emerald-900/30">
             <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center mb-5 text-emerald-500 shadow-inner"><svg className="w-10 h-10 animate-[bounce_1s_ease-in-out]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg></div>
             <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-2 text-center">¡Pago Exitoso!</h3>
-            <p className="text-gray-500 dark:text-slate-400 text-center mb-6 leading-relaxed">El saldo de la cuenta ha sido actualizado. Se registraron <br/><span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 block mt-2">{formatearDinero(pagoExitosoInfo)}</span></p>
+            <p className="text-gray-500 dark:text-slate-400 text-center mb-6 leading-relaxed">El saldo de la cuenta ha sido actualizado. Se registraron <br /><span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 block mt-2">{formatearDinero(pagoExitosoInfo)}</span></p>
             <button onClick={() => setPagoExitosoInfo(null)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-500/30">Aceptar</button>
           </div>
         </div>

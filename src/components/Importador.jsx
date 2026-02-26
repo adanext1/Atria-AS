@@ -3,11 +3,13 @@ import { useDropzone } from 'react-dropzone';
 const { ipcRenderer } = window.require('electron');
 
 export default function Importador({ alVolver, modoOscuro, toggleTema, irAProveedores }) {
-  
+
   const [archivosEnEspera, setArchivosEnEspera] = useState([]);
   const [filaExpandida, setFilaExpandida] = useState(null); // ESTADO NUEVO: Para saber qué fila está abierta
   const [configUsuario, setConfigUsuario] = useState({});
   const [resumenExito, setResumenExito] = useState(null);
+  const [pdfVacioAEditar, setPdfVacioAEditar] = useState(null); // NUEVO: Controla el modal de PDF Huérfano
+
   // ESTADO NUEVO: Al abrir la pantalla, preguntamos cuáles son nuestros RFCs
   useEffect(() => {
     ipcRenderer.invoke('obtener-config').then(res => setConfigUsuario(res || {}));
@@ -17,9 +19,9 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
   const procesarArchivos = async (archivosSueltos) => {
     const grupos = {};
 
-    const esUnParPerfecto = 
-      archivosSueltos.length === 2 && 
-      archivosSueltos.some(f => f.name.toLowerCase().endsWith('.xml')) && 
+    const esUnParPerfecto =
+      archivosSueltos.length === 2 &&
+      archivosSueltos.some(f => f.name.toLowerCase().endsWith('.xml')) &&
       archivosSueltos.some(f => f.name.toLowerCase().endsWith('.pdf'));
 
     if (esUnParPerfecto) {
@@ -38,13 +40,13 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
     }
 
     const nuevosProcesados = [];
-    
+
     // Obtenemos nuestros RFCs (Si hay varios, los separa por comas)
     const misRfcs = (configUsuario.rfc || '').toUpperCase().split(',').map(r => r.trim());
 
     for (const key in grupos) {
       const grupo = grupos[key];
-      
+
       let datosFactura = {
         id: Date.now() + Math.random(),
         contraparte: 'Desconocido', rfcContraparte: '---', folio: 'Sin Folio', total: 0.00,
@@ -56,9 +58,9 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
       if (grupo.xml) {
         try {
           const bufferXml = await grupo.xml.arrayBuffer();
-          datosFactura.xmlData = bufferXml; 
+          datosFactura.xmlData = bufferXml;
 
-          const textoXML = new TextDecoder().decode(bufferXml); 
+          const textoXML = new TextDecoder().decode(bufferXml);
           const parser = new DOMParser();
           const xmlDoc = parser.parseFromString(textoXML, "text/xml");
 
@@ -71,8 +73,8 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
             const folio = comprobante.getAttribute('Folio') || '';
             const serie = comprobante.getAttribute('Serie') || '';
             const tipoComprobante = comprobante.getAttribute('TipoDeComprobante') || 'I';
-            datosFactura.fecha = comprobante.getAttribute('Fecha') || new Date().toISOString(); 
-            
+            datosFactura.fecha = comprobante.getAttribute('Fecha') || new Date().toISOString();
+
             let tipoLegible = 'Ingreso (Factura)';
             if (tipoComprobante === 'E') tipoLegible = 'Egreso (Devolución)';
             if (tipoComprobante === 'P') tipoLegible = 'Pago (Complemento)';
@@ -93,15 +95,15 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
               datosFactura.tipoOperacion = 'Compra';
               datosFactura.contraparte = emisor.getAttribute('Nombre') || 'Proveedor Sin Nombre';
               datosFactura.rfcContraparte = rfcEmisor;
-              
+
               if (misRfcs[0] !== '' && !misRfcs.includes(rfcReceptor)) {
-                 datosFactura.mensajeSecundario = `⚠️ ATENCIÓN: El RFC que recibe la factura (${rfcReceptor}) no coincide con el tuyo.`;
+                datosFactura.mensajeSecundario = `⚠️ ATENCIÓN: El RFC que recibe la factura (${rfcReceptor}) no coincide con el tuyo.`;
               }
             }
 
             // --- EXTRACCIÓN DE PRODUCTOS PARA EL DESPLEGABLE ---
             const conceptosNodos = xmlDoc.getElementsByTagName('cfdi:Concepto');
-            for(let i=0; i<conceptosNodos.length; i++) {
+            for (let i = 0; i < conceptosNodos.length; i++) {
               datosFactura.conceptos.push({
                 cantidad: conceptosNodos[i].getAttribute('Cantidad'),
                 descripcion: conceptosNodos[i].getAttribute('Descripcion'),
@@ -132,9 +134,9 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
           const partes = datosFactura.fecha.split('T')[0].split('-');
           if (partes.length === 3) { anio = partes[0]; mes = partes[1]; dia = partes[2]; }
         }
-        
+
         const folioSeguro = datosFactura.folio.replace(/[<>:"/\\|?*]+/g, '_');
-        
+
         // Consultamos al backend si ya existe el archivo
         const existe = await ipcRenderer.invoke('verificar-duplicado', {
           tipoOperacion: datosFactura.tipoOperacion,
@@ -157,6 +159,34 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
       nuevosProcesados.push(datosFactura);
     }
     setArchivosEnEspera(prev => [...prev, ...nuevosProcesados]);
+  };
+
+  const guardarDatosManualesPdf = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const nombreProveedor = formData.get('proveedor').trim() || 'Desconocido';
+    const rfcGenerico = formData.get('rfc').trim() || 'XAXX010101000';
+    const folio = formData.get('folio').trim() || `S/F-${Date.now().toString().slice(-4)}`;
+    const total = parseFloat(formData.get('total')) || 0;
+    const fecha = formData.get('fecha') || new Date().toISOString().split('T')[0];
+
+    setArchivosEnEspera(prev => prev.map(archivo => {
+      if (archivo.id === pdfVacioAEditar.id) {
+        return {
+          ...archivo,
+          contraparte: nombreProveedor,
+          rfcContraparte: rfcGenerico,
+          folio: folio,
+          total: total,
+          fecha: `${fecha}T00:00:00.000Z`,
+          estado: 'listo', // Lo marcamos como listo para archivar
+          mensaje: 'Datos manuales añadidos. Listo para archivar.',
+          mensajeSecundario: 'Factura sin XML, generada manualmente desde Importador.'
+        };
+      }
+      return archivo;
+    }));
+    setPdfVacioAEditar(null); // Cerrar Modal
   };
 
   const onDrop = (acceptedFiles) => procesarArchivos(acceptedFiles);
@@ -182,7 +212,7 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
           cantidad: resultado.cantidad,
           nuevos: resultado.nuevos || []
         });
-        setArchivosEnEspera([]); 
+        setArchivosEnEspera([]);
       } else {
         alert(`Error al guardar: ${resultado.error}`);
       }
@@ -211,8 +241,8 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
         <p className="text-gray-500 dark:text-slate-400 mt-1">Arrastra tus facturas (XML y PDF). El sistema detectará si son compras o ventas automáticamente.</p>
       </div>
 
-      <section 
-        {...getRootProps()} 
+      <section
+        {...getRootProps()}
         className={`animate-fade-in-up delay-100 relative overflow-hidden border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 shadow-sm mb-8
           ${isDragActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]' : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-500'}`}
       >
@@ -238,7 +268,7 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
             </button>
           )}
         </div>
-        
+
         {archivosEnEspera.length === 0 ? (
           <div className="text-center py-10 border border-dashed border-gray-200 dark:border-slate-700 rounded-3xl">
             <p className="text-gray-400 dark:text-slate-500 font-medium">No hay archivos en espera. Arrastra algunos arriba para comenzar.</p>
@@ -247,11 +277,10 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
           <div className="space-y-4">
             {archivosEnEspera.map((archivo) => (
               <div key={archivo.id} className={`bg-white dark:bg-slate-800 rounded-2xl border ${archivo.estado === 'duplicado' ? 'border-gray-300 dark:border-slate-600 opacity-80' : 'border-gray-100 dark:border-slate-700'} shadow-sm overflow-hidden transition-all group`}>
-                
+
                 {/* ÁREA CLICKABLE (TU DISEÑO ORIGINAL MEJORADO) */}
-                <div 
-                  onClick={() => setFilaExpandida(filaExpandida === archivo.id ? null : archivo.id)}
-                  className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 relative cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+                <div
+                  className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 relative hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
                 >
                   {/* Barra de color lateral de estado */}
                   <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${archivo.estado === 'listo' ? 'bg-emerald-500' : archivo.estado === 'duplicado' ? 'bg-gray-400' : archivo.estado === 'advertencia' ? 'bg-orange-400' : 'bg-red-500'}`}></div>
@@ -274,14 +303,14 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
                       </span>
                       <h4 className={`font-bold truncate ${archivo.estado === 'duplicado' ? 'text-gray-500 dark:text-slate-400 line-through' : 'text-gray-800 dark:text-white'}`}>{archivo.contraparte}</h4>
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-slate-400 font-medium">
                       <span>RFC: <span className="text-gray-700 dark:text-slate-300">{archivo.rfcContraparte}</span></span>
                       <span>Folio: <span className="text-gray-700 dark:text-slate-300">{archivo.folio}</span></span>
                       <span className="bg-gray-100 dark:bg-slate-700 px-2 rounded-full">{archivo.tipo}</span>
                       <span>Fecha: <span className="text-gray-700 dark:text-slate-300">{archivo.fecha.split('T')[0]}</span></span>
                     </div>
-                    
+
                     <div className="mt-2">
                       <p className={`text-xs font-bold ${archivo.estado === 'listo' ? 'text-emerald-600 dark:text-emerald-400' : archivo.estado === 'duplicado' ? 'text-gray-500 dark:text-slate-400' : archivo.estado === 'advertencia' ? 'text-orange-600 dark:text-orange-400' : 'text-red-500'}`}>
                         {archivo.estado === 'duplicado' ? '🚫' : archivo.estado === 'listo' ? '✓' : '⚠️'} {archivo.mensaje}
@@ -294,12 +323,28 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
 
                   <div className="flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto mt-2 md:mt-0 gap-2">
                     <span className={`text-xl font-bold ${archivo.estado === 'duplicado' ? 'text-gray-400' : 'text-gray-800 dark:text-white'}`}>{formatearDinero(archivo.total)}</span>
-                    {/* INDICADOR PARA INEXPERTOS: Clic para ver detalles */}
-                    {archivo.xmlListo && (
-                      <span className="text-[11px] font-semibold text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-lg flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                        {filaExpandida === archivo.id ? 'Ocultar detalles ▴' : 'Ver productos ▾'}
-                      </span>
-                    )}
+
+                    <div className="flex gap-2">
+                      {/* BOTÓN NUEVO: Rellenar Datos si es un PDF huérfano */}
+                      {!archivo.xmlListo && archivo.pdfListo && archivo.estado === 'advertencia' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setPdfVacioAEditar(archivo); }}
+                          className="text-[11px] font-bold text-white bg-orange-500 hover:bg-orange-600 px-3 py-1.5 rounded-lg shadow-sm transition transform hover:scale-105"
+                        >
+                          ✏️ Añadir Datos
+                        </button>
+                      )}
+
+                      {/* INDICADOR PARA INEXPERTOS: Clic para ver detalles */}
+                      {archivo.xmlListo && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setFilaExpandida(filaExpandida === archivo.id ? null : archivo.id); }}
+                          className="text-[11px] font-semibold text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition"
+                        >
+                          {filaExpandida === archivo.id ? 'Ocultar detalles ▴' : 'Ver productos ▾'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -364,7 +409,7 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
       {resumenExito && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in-up">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-slate-700 relative transform transition-all scale-100">
-            
+
             {/* Icono gigante de éxito */}
             <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
               <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
@@ -398,28 +443,117 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
 
             {/* Los 3 Botones de acción */}
             <div className="space-y-3">
-              <button 
+              <button
                 onClick={() => { setResumenExito(null); if (irAProveedores) irAProveedores(); }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition shadow-md flex justify-center items-center gap-2"
               >
                 Ir a Directorio de Proveedores
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
               </button>
-              
-              <button 
+
+              <button
                 disabled
                 className="w-full bg-gray-50 dark:bg-slate-800 text-gray-400 dark:text-slate-500 font-bold py-3 px-4 rounded-xl cursor-not-allowed border border-dashed border-gray-200 dark:border-slate-700 flex justify-center items-center gap-2"
               >
                 Ir a Directorio de Clientes <span className="text-[10px] bg-gray-200 dark:bg-slate-700 px-2 py-0.5 rounded-full">Próximamente</span>
               </button>
 
-              <button 
+              <button
                 onClick={() => setResumenExito(null)}
                 className="w-full bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-bold py-3 px-4 rounded-xl transition border border-gray-200 dark:border-slate-600"
               >
                 Cerrar y seguir importando
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: RELLENAR DATOS DE PDF HUÉRFANO (NUEVO) */}
+      {/* ========================================================= */}
+      {pdfVacioAEditar && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in-up">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-slate-700 relative">
+            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Completar Datos del PDF</h3>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">
+              Este PDF no tiene un XML asociado. Llena estos datos básicos para que el sistema sepa a quién pertenece y por cuánto dinero.
+            </p>
+
+            <form onSubmit={guardarDatosManualesPdf} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Proveedor / Tienda</label>
+                <input
+                  type="text"
+                  name="proveedor"
+                  required
+                  placeholder="Ej: The Home Depot"
+                  className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">RFC (Opcional)</label>
+                  <input
+                    type="text"
+                    name="rfc"
+                    placeholder="XAXX010101000"
+                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Folio Factura</label>
+                  <input
+                    type="text"
+                    name="folio"
+                    required
+                    placeholder="Ej: F-10293"
+                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Monto Total ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="total"
+                    required
+                    placeholder="0.00"
+                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Fecha</label>
+                  <input
+                    type="date"
+                    name="fecha"
+                    required
+                    defaultValue={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setPdfVacioAEditar(null)}
+                  className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition transform hover:-translate-y-0.5"
+                >
+                  Guardar y Vincular
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

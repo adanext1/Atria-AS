@@ -10,8 +10,8 @@
     "empaquetar": "npm run build && electron-builder --win"
   },
   "build": {
-    "appId": "com.tuempresa.organizadorsat",
-    "productName": "Organizador SAT",
+    "appId": "com.tuempresa.atriaas",
+    "productName": "Atria AS",
     "directories": {
       "output": "lanzamiento/"
     },
