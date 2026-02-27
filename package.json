@@ -21,7 +21,8 @@
     "files": [
       "dist/**/*",
       "main.cjs",
-      "package.json"
+      "package.json",
+      "servicios/**/*"
     ]
   },
   "dependencies": {
