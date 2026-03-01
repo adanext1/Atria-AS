@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 const { ipcRenderer } = window.require('electron');
 
 export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, proveedor }) {
+  const nombreCarpeta = proveedor.carpetaDestino || proveedor.nombre;
 
   const [facturas, setFacturas] = useState([]);
   const [bitacora, setBitacora] = useState([]);
   const [productos, setProductos] = useState({});
   const [busquedaProducto, setBusquedaProducto] = useState('');
+  const [busquedaFactura, setBusquedaFactura] = useState('');
   const [cargando, setCargando] = useState(true);
   const [animarGrafica, setAnimarGrafica] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
@@ -62,7 +64,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
 
   const abrirFacturaOriginal = async (fac) => {
     const resultado = await ipcRenderer.invoke('abrir-factura-original', {
-      nombreProveedor: proveedor.nombre,
+      nombreProveedor: nombreCarpeta,
       fecha: fac.fecha,
       folio: fac.folio
     });
@@ -101,7 +103,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
         return;
       }
       resultado = await ipcRenderer.invoke('registrar-nota-credito', {
-        nombreProveedor: proveedor.nombre, idFactura: datosAdjunto.idFactura,
+        nombreProveedor: nombreCarpeta, idFactura: datosAdjunto.idFactura,
         montoNC: datosAdjunto.montoNC, archivoBase64: base64, extension: ext
       });
     } else {
@@ -111,7 +113,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
         return;
       }
       resultado = await ipcRenderer.invoke('adjuntar-documento', {
-        nombreProveedor: proveedor.nombre, idFactura: datosAdjunto.idFactura,
+        nombreProveedor: nombreCarpeta, idFactura: datosAdjunto.idFactura,
         tipoDoc: datosAdjunto.tipoDoc, archivoBase64: base64, extension: ext
       });
     }
@@ -145,7 +147,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
       ext = '.' + nombrePartes[nombrePartes.length - 1];
     }
     const resultado = await ipcRenderer.invoke('registrar-pago', {
-      nombreProveedor: proveedor.nombre, facturasSeleccionadas: facturasSeleccionadas,
+      nombreProveedor: nombreCarpeta, facturasSeleccionadas: facturasSeleccionadas,
       datosPago: { metodo: datosPago.metodo, referencia: datosPago.referencia, comprobanteBase64: base64, comprobanteExt: ext }
     });
 
@@ -165,11 +167,11 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
 
   const sincronizarLocal = async () => {
     setSincronizando(true);
-    const resultado = await ipcRenderer.invoke('sincronizar-proveedor', proveedor.nombre);
+    const resultado = await ipcRenderer.invoke('sincronizar-proveedor', nombreCarpeta);
     if (resultado.success) {
       await cargarDatosCompletos();
       const perfilActualizado = await ipcRenderer.invoke('obtener-proveedores');
-      const esteProv = perfilActualizado.find(p => p.nombre === proveedor.nombre);
+      const esteProv = perfilActualizado.find(p => p.carpetaDestino === nombreCarpeta);
       if (esteProv) setDeudaLocal(esteProv.metricas.deudaActual);
       setAnimarGrafica(false); setTimeout(() => setAnimarGrafica(true), 100);
     } else {
@@ -179,9 +181,9 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
   };
 
   const cargarDatosCompletos = async () => {
-    const facturasReales = await ipcRenderer.invoke('obtener-facturas-proveedor', proveedor.nombre);
-    const bitacoraReal = await ipcRenderer.invoke('obtener-bitacora', proveedor.nombre);
-    const productosReales = await ipcRenderer.invoke('obtener-productos-proveedor', proveedor.nombre); // <--- NUEVA LLAMADA
+    const facturasReales = await ipcRenderer.invoke('obtener-facturas-proveedor', nombreCarpeta);
+    const bitacoraReal = await ipcRenderer.invoke('obtener-bitacora', nombreCarpeta);
+    const productosReales = await ipcRenderer.invoke('obtener-productos-proveedor', nombreCarpeta); // <--- NUEVA LLAMADA
 
     setFacturas(facturasReales);
     setBitacora(bitacoraReal);
@@ -190,7 +192,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
     setTimeout(() => setAnimarGrafica(true), 100);
   };
 
-  useEffect(() => { cargarDatosCompletos(); }, [proveedor.nombre]);
+  useEffect(() => { cargarDatosCompletos(); }, [nombreCarpeta]);
 
   const formatearDinero = (cantidad) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(cantidad || 0);
 
@@ -340,64 +342,141 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
             ) : <p className="text-gray-400 text-sm text-center py-8">No hay datos para la gráfica.</p>}
           </div>
 
-          {/* TABLA DE FACTURAS (CON BOTONES FUNCIONALES) */}
+          {/* TABLAS DE FACTURAS */}
           <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm animate-fade-in-up delay-200">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-              Facturas en Bóveda ({facturas.length})
-            </h3>
-            <div className="overflow-x-auto max-h-96 overflow-y-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
-                  <tr className="border-b border-gray-100 dark:border-slate-700 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                    <th className="pb-3 pl-2 pt-2">Folio</th>
-                    <th className="pb-3 pt-2">Fecha</th>
-                    <th className="pb-3 text-right pt-2">Monto</th>
-                    <th className="pb-3 text-center pt-2" title="Factura Original">PDF</th>
-                    <th className="pb-3 text-center pt-2" title="Comprobante">Comp.</th>
-                    <th className="pb-3 text-center pt-2" title="REP (SAT)">REP</th>
-                    <th className="pb-3 text-center pt-2" title="Nota de Crédito">N.C.</th>
-                    <th className="pb-3 pl-4 pt-2">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {cargando ? <tr><td colSpan="7" className="text-center py-8">Cargando...</td></tr> :
-                    facturas.map((fac, idx) => (
-                      <tr key={idx} className="border-b border-gray-50 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-900/50 transition">
-                        <td className="py-4 pl-2 font-mono font-medium text-gray-800 dark:text-gray-200 truncate max-w-[100px]" title={fac.folio}>{fac.folio}</td>
-                        <td className="py-4 text-gray-600 dark:text-slate-400 whitespace-nowrap">{fac.fecha}</td>
-                        <td className="py-4 text-right font-bold text-gray-800 dark:text-white whitespace-nowrap">
-                          {formatearDinero(fac.monto)}
-                        </td>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Facturas en Bóveda ({facturas.length})
+              </h3>
 
-                        {/* NUEVO: FACTURA ORIGINAL */}
-                        <td className="py-4 align-middle">
-                          <div className="flex justify-center">
-                            <button onClick={() => abrirFacturaOriginal(fac)} title="Ver Factura Original" className="text-gray-400 hover:text-blue-500 bg-gray-50 hover:bg-blue-50 dark:bg-slate-700 dark:hover:bg-blue-900/30 p-1.5 rounded-lg transition hover:scale-110">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* BOTONES FUNCIONALES */}
-                        <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'COMP')}</div></td>
-                        <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'REP')}</div></td>
-                        <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'NC')}</div></td>
-
-                        <td className="py-4 pl-4 align-middle">
-                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap ${fac.estado === 'Pagada' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' :
-                              fac.estado === 'Esperando REP' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30' :
-                                'bg-red-100 text-red-700 dark:bg-red-900/30'
-                            }`}>
-                            {fac.estado}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  }
-                </tbody>
-              </table>
+              {/* BARRA DE BÚSQUEDA DE FACTURAS */}
+              <div className="relative w-full md:w-64">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Buscar factura por folio o fecha..."
+                  value={busquedaFactura}
+                  onChange={(e) => setBusquedaFactura(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-[#1a1f2b] text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-gray-800 dark:text-white transition-all"
+                />
+              </div>
             </div>
+
+            {/* TABLA PENDIENTES */}
+            <div className="mb-8">
+              <h4 className="text-md font-bold text-red-600 dark:text-red-400 mb-3 border-b border-red-100 dark:border-red-900/30 pb-2">Pendientes de Pago</h4>
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                    <tr className="border-b border-gray-100 dark:border-slate-700 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                      <th className="pb-3 pl-2 pt-2">Folio</th>
+                      <th className="pb-3 pt-2">Fecha</th>
+                      <th className="pb-3 text-right pt-2">Monto</th>
+                      <th className="pb-3 text-center pt-2" title="Factura Original">PDF</th>
+                      <th className="pb-3 text-center pt-2" title="Comprobante">Comp.</th>
+                      <th className="pb-3 text-center pt-2" title="REP (SAT)">REP</th>
+                      <th className="pb-3 text-center pt-2" title="Nota de Crédito">N.C.</th>
+                      <th className="pb-3 pl-4 pt-2">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm">
+                    {cargando ? <tr><td colSpan="8" className="text-center py-8">Cargando...</td></tr> :
+                      facturas.filter(f => f.estado !== 'Pagada' && ((f.folio || '').toLowerCase().includes(busquedaFactura.toLowerCase()) || (f.fecha || '').includes(busquedaFactura))).length === 0 ? (
+                        <tr><td colSpan="8" className="text-center py-8 text-gray-400 italic">No hay facturas pendientes.</td></tr>
+                      ) : (
+                        facturas
+                          .filter(f => f.estado !== 'Pagada')
+                          .filter(f => (f.folio || '').toLowerCase().includes(busquedaFactura.toLowerCase()) || (f.fecha || '').includes(busquedaFactura))
+                          .map((fac, idx) => (
+                            <tr key={idx} className="border-b border-gray-50 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-900/50 transition">
+                              <td className="py-4 pl-2 font-mono font-medium text-gray-800 dark:text-gray-200 truncate max-w-[100px]" title={fac.folio}>{fac.folio}</td>
+                              <td className="py-4 text-gray-600 dark:text-slate-400 whitespace-nowrap">{fac.fecha}</td>
+                              <td className="py-4 text-right font-bold text-gray-800 dark:text-white whitespace-nowrap">
+                                {formatearDinero(fac.monto)}
+                              </td>
+                              <td className="py-4 align-middle">
+                                <div className="flex justify-center">
+                                  <button onClick={() => abrirFacturaOriginal(fac)} title="Ver Factura Original" className="text-gray-400 hover:text-blue-500 bg-gray-50 hover:bg-blue-50 dark:bg-slate-700 dark:hover:bg-blue-900/30 p-1.5 rounded-lg transition hover:scale-110">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'COMP')}</div></td>
+                              <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'REP')}</div></td>
+                              <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'NC')}</div></td>
+                              <td className="py-4 pl-4 align-middle">
+                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap ${fac.estado === 'Esperando REP' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30' : 'bg-red-100 text-red-700 dark:bg-red-900/30'}`}>
+                                  {fac.estado}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                      )
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* TABLA PAGADAS */}
+            <div>
+              <h4 className="text-md font-bold text-emerald-600 dark:text-emerald-400 mb-3 border-b border-emerald-100 dark:border-emerald-900/30 pb-2">Pagadas y Completadas</h4>
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                    <tr className="border-b border-gray-100 dark:border-slate-700 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                      <th className="pb-3 pl-2 pt-2">Folio</th>
+                      <th className="pb-3 pt-2">Fecha</th>
+                      <th className="pb-3 text-right pt-2">Monto</th>
+                      <th className="pb-3 text-center pt-2" title="Factura Original">PDF</th>
+                      <th className="pb-3 text-center pt-2" title="Comprobante">Comp.</th>
+                      <th className="pb-3 text-center pt-2" title="REP (SAT)">REP</th>
+                      <th className="pb-3 text-center pt-2" title="Nota de Crédito">N.C.</th>
+                      <th className="pb-3 pl-4 pt-2">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm">
+                    {cargando ? <tr><td colSpan="8" className="text-center py-8">Cargando...</td></tr> :
+                      facturas.filter(f => f.estado === 'Pagada' && ((f.folio || '').toLowerCase().includes(busquedaFactura.toLowerCase()) || (f.fecha || '').includes(busquedaFactura))).length === 0 ? (
+                        <tr><td colSpan="8" className="text-center py-8 text-gray-400 italic">No hay facturas pagadas.</td></tr>
+                      ) : (
+                        facturas
+                          .filter(f => f.estado === 'Pagada')
+                          .filter(f => (f.folio || '').toLowerCase().includes(busquedaFactura.toLowerCase()) || (f.fecha || '').includes(busquedaFactura))
+                          .map((fac, idx) => (
+                            <tr key={idx} className="border-b border-gray-50 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-900/50 transition">
+                              <td className="py-4 pl-2 font-mono font-medium text-gray-800 dark:text-gray-200 truncate max-w-[100px]" title={fac.folio}>{fac.folio}</td>
+                              <td className="py-4 text-gray-600 dark:text-slate-400 whitespace-nowrap">{fac.fecha}</td>
+                              <td className="py-4 text-right font-bold text-gray-800 dark:text-white whitespace-nowrap">
+                                {formatearDinero(fac.monto)}
+                              </td>
+                              <td className="py-4 align-middle">
+                                <div className="flex justify-center">
+                                  <button onClick={() => abrirFacturaOriginal(fac)} title="Ver Factura Original" className="text-gray-400 hover:text-blue-500 bg-gray-50 hover:bg-blue-50 dark:bg-slate-700 dark:hover:bg-blue-900/30 p-1.5 rounded-lg transition hover:scale-110">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'COMP')}</div></td>
+                              <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'REP')}</div></td>
+                              <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'NC')}</div></td>
+                              <td className="py-4 pl-4 align-middle">
+                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30`}>
+                                  {fac.estado}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                      )
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
           {/* ========================================================= */}
           {/* NUEVA SECCIÓN: CATÁLOGO Y TENDENCIA DE PRECIOS            */}

@@ -53,12 +53,12 @@ module.exports = function setupImapIPC(ipcMain, store) {
     }
   });
 
-  ipcMain.handle('escanear-correos', async (event, limite = 10, rutaCarpeta = 'INBOX', forzarRecarga = false) => {
+  ipcMain.handle('escanear-correos', async (event, limite = 20, rutaCarpeta = 'INBOX', forzarRecarga = false) => {
     const config = store.get('imapConfig');
     if (!config || !config.user) return { success: false, error: 'No hay configuración IMAP.' };
 
     // 1. RUTA DEL CACHÉ EN EL DISCO DURO (Memoria a largo plazo)
-    const nombreLimpio = rutaCarpeta.replace(/[^a-zA-Z0-9]/g, '_');
+    const nombreLimpio = rutaCarpeta.trim().replace(/[^a-zA-Z0-9_-]/gi, '_');
     const carpetaCache = path.join(app.getPath('userData'), 'Cache_ERP');
     const archivoCache = path.join(carpetaCache, `lista_${nombreLimpio}.json`);
 
@@ -90,6 +90,7 @@ module.exports = function setupImapIPC(ipcMain, store) {
 
     try {
       await client.connect();
+      // Ensure we lock the SPECIFIC folder the user requested
       let lock = await client.getMailboxLock(rutaCarpeta);
       const status = await client.mailboxOpen(rutaCarpeta);
       const totalMessages = status.exists;
@@ -103,15 +104,36 @@ module.exports = function setupImapIPC(ipcMain, store) {
       const seq = `${start}:*`;
       const correosReales = [];
 
+      // 3B. LEER ARCHIVO DE CORREOS YA PROCESADOS
+      const procesadosPath = path.join(carpetaCache, `procesados_${config.user.replace(/[^a-zA-Z0-9]/g, '_')}.json`);
+      let procesados = [];
+      if (await fsExtra.pathExists(procesadosPath)) {
+        procesados = await fsExtra.readJson(procesadosPath);
+      }
+
       for await (let message of client.fetch(seq, { source: true })) {
         const parsed = await simpleParser(message.source);
         let tieneXml = false; let tienePdf = false;
+        let otrosAdjuntos = [];
+        let totalXmlTag = 'Por calcular';
 
         if (parsed.attachments && parsed.attachments.length > 0) {
           parsed.attachments.forEach(att => {
             const ext = att.filename ? att.filename.toLowerCase() : '';
-            if (ext.endsWith('.xml')) tieneXml = true;
-            if (ext.endsWith('.pdf')) tienePdf = true;
+            if (ext.endsWith('.xml')) {
+              tieneXml = true;
+              if (totalXmlTag === 'Por calcular' && att.content) {
+                const xmlStr = att.content.toString('utf-8');
+                const totalMatch = xmlStr.match(/\sTotal=["']?([^"']+)["']?/);
+                if (totalMatch) totalXmlTag = `$${totalMatch[1]} MXN`;
+              }
+            } else if (ext.endsWith('.pdf')) {
+              tienePdf = true;
+            } else if (ext.endsWith('.zip') || ext.endsWith('.rar')) {
+              if (!otrosAdjuntos.includes('ZIP')) otrosAdjuntos.push('ZIP');
+            } else if (ext.endsWith('.jpg') || ext.endsWith('.png') || ext.endsWith('.jpeg')) {
+              if (!otrosAdjuntos.includes('IMG')) otrosAdjuntos.push('IMG');
+            }
           });
         }
 
@@ -121,8 +143,11 @@ module.exports = function setupImapIPC(ipcMain, store) {
           empresa: parsed.from?.value[0]?.name || parsed.from?.value[0]?.address,
           asunto: parsed.subject || 'Sin Asunto',
           mensaje: parsed.text ? parsed.text.substring(0, 120) + '...' : 'Sin vista previa.',
+          mensajeHtml: parsed.html || parsed.textAsHtml || '',
           fecha: parsed.date ? parsed.date.toLocaleDateString() : 'Hoy',
-          tieneXml, tienePdf, total: 'Por calcular'
+          tieneXml, tienePdf, otrosAdjuntos,
+          total: totalXmlTag,
+          importado: procesados.includes(message.uid)
         });
       }
 
@@ -336,19 +361,113 @@ module.exports = function setupImapIPC(ipcMain, store) {
 
   ipcMain.handle('guardar-factura-erp', async (event, datos) => {
     try {
+      const configUsuario = store.get('userConfig') || {};
+      const misRfcs = (configUsuario.rfc || '').toUpperCase().split(',').map(r => r.trim());
+
+      const fuenteDatos = datos.xmlInfo || {};
+      const datosManuales = datos.datosManuales || null;
+
+      const rfcEmisor = ((datosManuales ? datosManuales.rfc : fuenteDatos.rfcEmisor) || '').toUpperCase();
+      const rfcReceptor = ((fuenteDatos.rfcReceptor) || '').toUpperCase();
+      let tipoOperacion = 'Compra';
+      let nombreContraparte = (datosManuales ? datosManuales.proveedor : fuenteDatos.nombreEmisor) || 'Desconocido';
+
+      if (!datosManuales && misRfcs.includes(rfcEmisor)) {
+        tipoOperacion = 'Venta';
+        nombreContraparte = fuenteDatos.nombreReceptor || 'Cliente Desconocido';
+      }
+
+      const nombreSeguro = nombreContraparte.replace(/[<>:"/\\|?*]+/g, '').trim();
+      const subcarpeta = tipoOperacion === 'Venta' ? 'Clientes' : 'Proveedores';
+
+      const rutaRaizProveedor = path.join(configUsuario.rutaDestino, subcarpeta, nombreSeguro);
+      await fsExtra.ensureDir(rutaRaizProveedor);
+
+      const folioExtraido = (datosManuales ? datosManuales.folio : fuenteDatos.folio) || `S_F-${Date.now().toString().slice(-4)}`;
+      const folioSeguro = folioExtraido.replace(/[<>:"/\\|?*]+/g, '_');
+
+      let anio = '2025', mes = '01', dia = '01';
+      const fechaParaExtraer = datosManuales ? datosManuales.fecha : null;
+      if (fechaParaExtraer) {
+        const partes = fechaParaExtraer.split('-');
+        if (partes.length === 3) { anio = partes[0]; mes = partes[1]; dia = partes[2]; }
+      }
+
+      const rutaFinalArchivos = path.join(rutaRaizProveedor, anio, mes, dia);
+      await fsExtra.ensureDir(rutaFinalArchivos);
 
       const nombreArchivoBase = `${nombreSeguro}_${folioSeguro}`;
       let rutaXmlFinal = '';
+      let rutaPdfFinal = '';
 
-      for (const rutaVieja of datos.archivos) {
+      // Verificar si ya existe para evitar crasheos o sobreescritura accidental
+      const existeXml = await fsExtra.pathExists(path.join(rutaFinalArchivos, `${nombreArchivoBase}.xml`));
+      if (existeXml) {
+        return { success: false, error: 'DUPLICADO' };
+      }
+
+      const rutaPerfilJson = path.join(rutaRaizProveedor, 'perfil.json');
+      if (!(await fsExtra.pathExists(rutaPerfilJson))) {
+        await fsExtra.writeJson(rutaPerfilJson, {
+          id: Date.now().toString(), nombre: nombreContraparte, rfc: rfcEmisor,
+          tipo: subcarpeta, tipoPago: 'contado', logo: '', contactos: [], cuentasBancarias: [],
+          metricas: {
+            comprasHistoricas: parseFloat((datosManuales ? datosManuales.total : fuenteDatos.total) || 0),
+            totalFacturas: 1, deudaActual: 0
+          },
+          fechaRegistro: new Date().toISOString()
+        }, { spaces: 2 });
+      }
+
+      for (const rutaVieja of datos.archivos || []) {
         const extension = path.extname(rutaVieja).toLowerCase();
         const rutaNueva = path.join(rutaFinalArchivos, `${nombreArchivoBase}${extension}`);
         await fsExtra.copy(rutaVieja, rutaNueva, { overwrite: true });
         if (extension === '.xml') rutaXmlFinal = rutaNueva;
+        if (extension === '.pdf') rutaPdfFinal = rutaNueva;
       }
 
       if (rutaXmlFinal) {
+        const { actualizarLibrosProveedor } = require('./providers.cjs');
         await actualizarLibrosProveedor(rutaRaizProveedor, rutaXmlFinal, `${nombreArchivoBase}.xml`);
+      } else if (datosManuales && rutaPdfFinal) {
+        const rutaFacturas = path.join(rutaRaizProveedor, 'registro_facturas.json');
+        let facturas = [];
+        if (await fsExtra.pathExists(rutaFacturas)) facturas = await fsExtra.readJson(rutaFacturas);
+
+        facturas.push({
+          id: Date.now().toString(),
+          folio: folioExtraido,
+          fecha: `${datosManuales.fecha}T00:00:00.000Z`,
+          monto: parseFloat(datosManuales.total || 0),
+          estado: 'Requiere Revisión',
+          metodoPago: 'PUE',
+          pdfPath: rutaPdfFinal,
+          xmlPath: null
+        });
+        await fsExtra.writeJson(rutaFacturas, facturas, { spaces: 2 });
+
+        const rutaBitacora = path.join(rutaRaizProveedor, 'bitacora_eventos.json');
+        let bitacora = await fsExtra.pathExists(rutaBitacora) ? await fsExtra.readJson(rutaBitacora) : [];
+        bitacora.unshift({
+          fechaHora: new Date().toLocaleString('es-MX'),
+          tipo: 'NUEVA FACTURA', icono: '📄',
+          descripcion: `Nueva compra registrada MANUALMENTE (Folio: ${folioExtraido}) por $${parseFloat(datosManuales.total || 0)}`
+        });
+        await fsExtra.writeJson(rutaBitacora, bitacora, { spaces: 2 });
+      }
+
+      // IMPORTANTE: Guardamos el ID del correo como procesado para mostrar la etiqueta ✅ Importado
+      if (datos.correoId) {
+        const carpetaCache = path.join(app.getPath('userData'), 'Cache_ERP');
+        const procesadosPath = path.join(carpetaCache, `procesados_${configUsuario.user?.replace(/[^a-zA-Z0-9]/g, '_') || 'default'}.json`);
+        await fsExtra.ensureDir(carpetaCache);
+        let procesados = [];
+        if (await fsExtra.pathExists(procesadosPath)) procesados = await fsExtra.readJson(procesadosPath);
+        if (!procesados.includes(datos.correoId)) {
+          procesados.push(datos.correoId);
+          await fsExtra.writeJson(procesadosPath, procesados);
+        }
       }
 
       return { success: true, mensaje: `Factura ${folioSeguro} guardada e indexada en el ERP.` };

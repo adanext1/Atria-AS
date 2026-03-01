@@ -1,4 +1,4 @@
-export default function Dashboard({ alCerrarSesion, modoOscuro, toggleTema, irAConfiguracion, irAProveedores, irABoveda, irAImportador, irAlCorreo, irAApps, irAProductos, irAPrecios }) {
+export default function Dashboard({ alCerrarSesion, modoOscuro, toggleTema, irAConfiguracion, irAProveedores, irAClientes, irABoveda, irAImportador, irAlCorreo, irAApps, irAProductos, irAPrecios }) {
   return (
     <div className="min-h-screen p-4 md:p-8 font-sans max-w-7xl mx-auto">
 
@@ -58,6 +58,24 @@ export default function Dashboard({ alCerrarSesion, modoOscuro, toggleTema, irAC
           <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Directorio Proveedores</h3>
           <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">
             Consulta y administra las razones sociales, RFCs y el histórico de compras agrupadas por empresa.
+          </p>
+        </div>
+
+        {/* CARD: CLIENTES */}
+        <div onClick={irAClientes} className="group bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+          <div className="flex items-center justify-between mb-4">
+            <div className="bg-cyan-50 dark:bg-cyan-900/30 p-4 rounded-2xl text-cyan-600 dark:text-cyan-400 group-hover:scale-110 transition-transform duration-300">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+            </div>
+            <span className="text-gray-400 dark:text-slate-500 group-hover:text-cyan-500 transition-colors">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+            </span>
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Directorio Clientes</h3>
+          <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">
+            Administra a los clientes a los que les facturas, revisa sus pagos y estados de cuenta históricos.
           </p>
         </div>
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import VistaPrevia from './VistaPrevia'; // Importamos a su hermano para las pantallas pequeñas
 
 const paletasDominio = [
@@ -17,7 +17,27 @@ const getColorPorRemitente = (email) => {
   return paletasDominio[Math.abs(hash) % paletasDominio.length];
 };
 
-export default function ListaCorreos({ correosLista, correoSeleccionado, seleccionados, setSeleccionados, seleccionarYDescargar, detallesCorreo, setCorreoSeleccionado, importando, progresoImportacion, procesarImportacion, escaneando, cargarMasCorreos }) {
+export default function ListaCorreos({ correosLista, correoSeleccionado, seleccionados, setSeleccionados, seleccionarYDescargar, detallesCorreo, setCorreoSeleccionado, importando, progresoImportacion, procesarImportacion, escaneando, cargarMasCorreos, abrirModalPDFManual }) {
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroActivo, setFiltroActivo] = useState('todos');
+
+  // Filtrado rápido en memoria
+  const correosFiltrados = correosLista.filter(c => {
+    const texto = busqueda.toLowerCase();
+    const coincideBusqueda =
+      (c.remitente || '').toLowerCase().includes(texto) ||
+      (c.empresa || '').toLowerCase().includes(texto) ||
+      (c.asunto || '').toLowerCase().includes(texto);
+
+    if (!coincideBusqueda) return false;
+
+    if (filtroActivo === 'todos') return true;
+    if (filtroActivo === 'xml') return c.tieneXml;
+    if (filtroActivo === 'pdf') return c.tienePdf;
+    if (filtroActivo === 'importado') return c.importado;
+    if (filtroActivo === 'texto') return !c.tieneXml && !c.tienePdf && (!c.otrosAdjuntos || c.otrosAdjuntos.length === 0);
+    return true;
+  });
 
   if (correosLista.length === 0) {
     return (
@@ -42,11 +62,36 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
   return (
     <div className={`flex flex-col h-full transition-all duration-500 ease-in-out ${correoSeleccionado ? 'w-full lg:w-5/12' : 'w-full max-w-5xl mx-auto'}`}>
 
+      {/* BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS */}
+      <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 mb-4 shrink-0 flex flex-col gap-3">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+          <input
+            type="text"
+            placeholder="Buscar por Empresa o Asunto..."
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+          {[{ id: 'todos', label: 'Todos' }, { id: 'xml', label: 'Con XML' }, { id: 'pdf', label: 'Con PDF' }, { id: 'importado', label: 'Importados' }, { id: 'texto', label: 'Solo Texto' }].map(f => (
+            <button
+              key={f.id}
+              onClick={() => setFiltroActivo(f.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${filtroActivo === f.id ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* BARRA DE ACCIONES MASIVAS */}
       <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 mb-4 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-2 lg:gap-3">
-          <input type="checkbox" checked={seleccionados.length === correosLista.length && correosLista.length > 0} onChange={seleccionarTodos} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer ml-1 lg:ml-2" />
-          <span className="text-xs lg:text-sm font-bold text-gray-500 dark:text-gray-400">Todo</span>
+          <input type="checkbox" checked={seleccionados.length === correosFiltrados.length && correosFiltrados.length > 0} onChange={seleccionarTodos} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer ml-1 lg:ml-2" />
+          <span className="text-xs lg:text-sm font-bold text-gray-500 dark:text-gray-400">Todo ({correosFiltrados.length})</span>
         </div>
         <div className={`flex gap-2 transition-opacity duration-300 ${seleccionados.length > 0 ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
           <button
@@ -71,7 +116,11 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
 
       {/* LISTA DE TARJETAS */}
       <div className="overflow-y-auto space-y-3 pb-20 pr-1 custom-scrollbar">
-        {correosLista.map(correo => {
+        {correosFiltrados.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-gray-500 dark:text-slate-400 font-medium">No se encontraron correos con estos filtros.</p>
+          </div>
+        ) : correosFiltrados.map(correo => {
           const colorP = getColorPorRemitente(correo.remitente);
           const estaActivo = correoSeleccionado?.id === correo.id;
 
@@ -94,10 +143,14 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
                   <p className="hidden md:block text-xs text-gray-500 dark:text-slate-500 truncate mb-2">{correo.mensaje}</p>
 
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 mt-2 md:mt-0">
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2 md:mt-0">
+                      {correo.importado && <span className="flex items-center gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-black tracking-wider uppercase border border-emerald-200 dark:border-emerald-800/50"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg> Importado</span>}
                       {correo.tieneXml && <span className="flex items-center gap-1 bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-black tracking-wider uppercase border border-purple-200 dark:border-purple-800/50">XML</span>}
                       {correo.tienePdf && <span className="flex items-center gap-1 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-black tracking-wider uppercase border border-red-200 dark:border-red-800/50">PDF</span>}
-                      {!correo.tieneXml && !correo.tienePdf && <span className="flex items-center gap-1 bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400 px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-bold tracking-wider uppercase">Solo Texto</span>}
+                      {correo.otrosAdjuntos?.includes('ZIP') && <span className="flex items-center gap-1 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-black tracking-wider uppercase border border-amber-200 dark:border-amber-800/50">ZIP</span>}
+                      {correo.otrosAdjuntos?.includes('IMG') && <span className="flex items-center gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-black tracking-wider uppercase border border-blue-200 dark:border-blue-800/50">FOTO</span>}
+
+                      {!correo.tieneXml && !correo.tienePdf && (!correo.otrosAdjuntos || correo.otrosAdjuntos.length === 0) && <span className="flex items-center gap-1 bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400 px-1.5 py-0.5 rounded text-[9px] lg:text-[10px] font-bold tracking-wider uppercase">Solo Texto</span>}
                     </div>
 
                     {/* LÓGICA DE DERECHA: Si tiene total, lo mostramos. Si es solo PDF seleccionado y descargado, mostramos botón Añadir */}

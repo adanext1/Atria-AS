@@ -9,6 +9,8 @@ const setupPaymentsIPC = require('./servicios/payments.cjs');
 const setupImapIPC = require('./servicios/imap-service.cjs');
 const setupAppsIPC = require('./servicios/apps.cjs');
 const setupAiIPC = require('./servicios/ai-catalog.cjs');
+const setupClientesIPC = require('./servicios/clientes.cjs'); // NUEVO
+
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -40,6 +42,7 @@ app.whenReady().then(async () => {
   setupImapIPC(ipcMain, store);
   setupAppsIPC(ipcMain, store);
   setupAiIPC(ipcMain, store);
+  setupClientesIPC(ipcMain, store); // NUEVO
 
   createWindow();
 });

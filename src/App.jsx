@@ -12,6 +12,8 @@ import CentroApps from './components/CentroApps';
 import BarraApps from './components/BarraApps';
 import ModuloProductos from './components/ModuloProductos';
 import ModuloPrecios from './components/ModuloPrecios'; // <--- IMPORTACIÓN DE PRECIOS
+import Clientes from './components/Clientes'; // <--- NUEVO
+import DetalleCliente from './components/DetalleCliente'; // <--- NUEVO
 
 function App() {
   const [estaLogueado, setEstaLogueado] = useState(false);
@@ -36,6 +38,7 @@ function App() {
               alCerrarSesion={() => setEstaLogueado(false)} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
               irAConfiguracion={() => setPantallaActual('configuracion')}
               irAProveedores={() => setPantallaActual('proveedores')}
+              irAClientes={() => setPantallaActual('clientes')} // <--- NUEVO
               irABoveda={() => setPantallaActual('boveda')}
               irAImportador={() => setPantallaActual('importador')}
               irAlCorreo={() => setPantallaActual('modulo-correos')}
@@ -73,6 +76,19 @@ function App() {
               alVolver={() => setPantallaActual('proveedores')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
               proveedor={proveedorViendo}
             />
+          ) : pantallaActual === 'clientes' ? ( // <--- NUEVO
+            <Clientes
+              alVolver={() => setPantallaActual('dashboard')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
+              irADetalleCliente={(cli) => {
+                setProveedorViendo(cli); // Reusamos el estado proveedorViendo por simplicidad
+                setPantallaActual('detalle-cliente');
+              }}
+            />
+          ) : pantallaActual === 'detalle-cliente' ? ( // <--- NUEVO
+            <DetalleCliente
+              alVolver={() => setPantallaActual('clientes')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
+              cliente={proveedorViendo}
+            />
           ) : pantallaActual === 'boveda' ? (
             <BovedaFacturas
               alVolver={() => setPantallaActual('dashboard')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
@@ -81,6 +97,7 @@ function App() {
             <Importador
               alVolver={() => setPantallaActual('dashboard')} modoOscuro={modoOscuro} toggleTema={() => setModoOscuro(!modoOscuro)}
               irAProveedores={() => setPantallaActual('proveedores')}
+              irAClientes={() => setPantallaActual('clientes')}
             />
           ) : pantallaActual === 'modulo-correos' ? (
             <ModuloCorreos

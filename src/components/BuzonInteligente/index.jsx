@@ -332,9 +332,9 @@ export default function BuzonInteligente({ alVolver, modoOscuro, toggleTema }) {
                 progresoImportacion={progresoImportacion}
                 procesarImportacion={procesarImportacion}
 
-                // --- NUEVAS LÍNEAS ---
                 escaneando={escaneando}
                 cargarMasCorreos={cargarMasCorreos}
+                abrirModalPDFManual={() => setPdfVacioAEditar(correoSeleccionado)}
               />
 
               {correoSeleccionado && (

@@ -433,6 +433,7 @@ module.exports = {
               perfil.logo = null;
             }
 
+            perfil.carpetaDestino = carpeta; // PROPIEDAD MÁGICA PARA EVITAR DUPLICADOS AL RENOMBRAR
             listaProveedores.push(perfil);
           }
         }
@@ -477,7 +478,8 @@ module.exports = {
         const config = store.get('userConfig');
         if (!config || !config.rutaDestino) return { success: false, error: 'Falta ruta destino en Ajustes.' };
 
-        const nombreSeguro = datosProveedor.nombreComercial.replace(/[<>:"/\\|?*]+/g, '').trim();
+        // MAGIA: Si ya existe carpetaDestino (porque estamos editando), la usamos. Si no, la creamos desde cero.
+        const nombreSeguro = datosProveedor.carpetaDestino || datosProveedor.nombreComercial.replace(/[<>:"/\\|?*]+/g, '').trim();
         const rutaRaizProveedor = path.join(config.rutaDestino, 'Proveedores', nombreSeguro);
 
         await fsExtra.ensureDir(rutaRaizProveedor);

@@ -6,14 +6,15 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
   const esModoEdicion = Boolean(proveedorAEditar);
 
   const estadoInicial = {
+    carpetaDestino: '', // Referencia a la carpeta física original (Evita crear duplicados al renombrar)
     logoPreview: null, logoPath: null,
-    nombreComercial: '', razonSocial: '', rfc: '', grupo: '', diasVisita: [], 
-    tipoPago: 'contado', diasCreditoNeto: '', frecuenciaSemanas: '1', diaPagoFijo: 'Lunes', fechaBase: '', limiteCredito: '', 
+    nombreComercial: '', razonSocial: '', rfc: '', grupo: '', diasVisita: [],
+    tipoPago: 'contado', diasCreditoNeto: '', frecuenciaSemanas: '1', diaPagoFijo: 'Lunes', fechaBase: '', limiteCredito: '',
     // CORREOS GLOBALES (Nuevo)
     correosFacturacion: '', correosPagos: '',
     contactos: [{ id: Date.now(), rol: 'Vendedor / Ejecutivo', nombre: '', telefono: '', correo: '', esWhatsApp: false }],
     cuentasBancarias: [{ id: Date.now(), banco: '', cuenta: '', clabe: '' }],
-    notasGenerales: '' 
+    notasGenerales: ''
   };
 
   const [formData, setFormData] = useState(estadoInicial);
@@ -32,11 +33,11 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
 
   useEffect(() => {
     if (proveedorAEditar) {
-      setFormData({ 
-        ...estadoInicial, 
-        ...proveedorAEditar, 
-        nombreComercial: proveedorAEditar.nombre || '', 
-        logoPreview: proveedorAEditar.logo 
+      setFormData({
+        ...estadoInicial,
+        ...proveedorAEditar,
+        nombreComercial: proveedorAEditar.nombre || '',
+        logoPreview: proveedorAEditar.logo
       });
     }
     ipcRenderer.invoke('obtener-grupos').then(res => setGruposExistentes(res));
@@ -48,8 +49,8 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
       setFormData(prev => ({ ...prev, logoFile: file, logoPreview: URL.createObjectURL(file) }));
     }
   };
-  const { getRootProps: getLogoProps, getInputProps: getLogoInput, isDragActive: isDragLogo } = useDropzone({ 
-    onDrop: onDropLogo, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }, maxFiles: 1 
+  const { getRootProps: getLogoProps, getInputProps: getLogoInput, isDragActive: isDragLogo } = useDropzone({
+    onDrop: onDropLogo, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }, maxFiles: 1
   });
 
   const handleChange = (e) => {
@@ -66,7 +67,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
 
   const seleccionarGrupo = (grupo) => { setFormData({ ...formData, grupo }); setMostrarOpcionesGrupo(false); };
   const toggleDiaVisita = (dia) => { setFormData(prev => ({ ...prev, diasVisita: prev.diasVisita.includes(dia) ? prev.diasVisita.filter(d => d !== dia) : [...prev.diasVisita, dia] })); };
-  
+
   // FUNCIONES DE CONTACTOS Y BANCOS
   const agregarContacto = () => setFormData(prev => ({ ...prev, contactos: [...prev.contactos, { id: Date.now(), rol: 'Otro', nombre: '', telefono: '', correo: '', esWhatsApp: false }] }));
   const actualizarContacto = (id, campo, valor) => setFormData(prev => ({ ...prev, contactos: prev.contactos.map(c => c.id === id ? { ...c, [campo]: valor } : c) }));
@@ -104,11 +105,11 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
     if (formData.logoFile) {
       payload.logoBase64 = await convertirABase64(formData.logoFile);
       payload.logoExt = formData.logoFile.name.substring(formData.logoFile.name.lastIndexOf('.'));
-      delete payload.logoFile; 
+      delete payload.logoFile;
     }
 
     const resultado = await ipcRenderer.invoke('guardar-proveedor-manual', payload);
-    
+
     setGuardando(false);
     if (resultado.success) {
       setMostrarModalExito(true);
@@ -119,7 +120,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
 
   return (
     <div className="min-h-screen p-4 md:p-8 font-sans max-w-5xl mx-auto">
-      
+
       {/* HEADER */}
       <header className="animate-fade-in-up flex justify-between items-center mb-6 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 relative z-20">
         <button type="button" onClick={alVolver} className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 font-semibold transition">
@@ -142,7 +143,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
       </div>
 
       <form onSubmit={guardarProveedor} className="space-y-6 animate-fade-in-up delay-100 relative z-0">
-        
+
         {/* IDENTIDAD */}
         <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
           <h3 className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-6 border-b border-gray-100 dark:border-slate-700 pb-3 flex items-center gap-2">
@@ -164,13 +165,13 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
                 )}
               </div>
             </div>
-            
+
             <div className="col-span-1 md:col-span-2 space-y-5">
               <div>
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Nombre Comercial *</label>
                 <input type="text" name="nombreComercial" value={formData.nombreComercial} onChange={handleChange} required placeholder="Ej. Frutabastos La Ramada" className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-600 rounded-xl p-3 text-gray-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all" />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Razón Social</label>
@@ -184,12 +185,12 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
 
               <div className="relative">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1 group cursor-help w-max">
-                  Grupo / Categoría 
+                  Grupo / Categoría
                   <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                   <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-64 bg-gray-800 text-white text-xs p-3 rounded-lg shadow-xl z-50">Escribe una nueva categoría o selecciona una existente.</div>
                 </label>
                 <input type="text" name="grupo" value={formData.grupo} onChange={handleChange} onFocus={() => setMostrarOpcionesGrupo(true)} onBlur={() => setTimeout(() => setMostrarOpcionesGrupo(false), 200)} placeholder="Ej. Abarrotes, Carnes, Lácteos..." className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-600 rounded-xl p-3 text-gray-900 dark:text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" />
-                
+
                 {mostrarOpcionesGrupo && gruposExistentes.length > 0 && (
                   <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-lg z-50 max-h-40 overflow-y-auto">
                     {gruposExistentes.map(grupo => (
@@ -208,7 +209,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
             Reglas de Visita y Plazos de Pago
           </h3>
-          
+
           <div className="space-y-8">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3">Días habituales de visita (Opcional)</label>
@@ -238,7 +239,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
               {/* CUADROS DINÁMICOS ANIMADOS */}
               <div className={`overflow-hidden transition-all duration-500 ${formData.tipoPago !== 'contado' ? 'max-h-40 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}`}>
                 <div className="bg-purple-50 dark:bg-slate-900/80 p-5 rounded-xl border border-purple-100 dark:border-slate-700 shadow-inner">
-                  
+
                   {formData.tipoPago === 'neto' && (
                     <div className="flex items-center gap-3 animate-fade-in">
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Dar crédito de</span>
@@ -246,7 +247,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">días naturales.</span>
                     </div>
                   )}
-                  
+
                   {formData.tipoPago === 'ciclico' && (
                     <div className="flex flex-wrap items-center gap-3 animate-fade-in">
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Pagar cada</span>
@@ -255,9 +256,9 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
                       <select name="diaPagoFijo" value={formData.diaPagoFijo} onChange={handleChange} className="bg-white dark:bg-[#1e2433] border border-gray-300 dark:border-slate-600 rounded-lg p-2 text-sm text-gray-900 dark:text-white outline-none focus:border-purple-500">{diasSemana.map(d => <option key={d} value={d}>{d}</option>)}</select>
                     </div>
                   )}
-                  
+
                   {formData.tipoPago === 'variable' && (
-                     <p className="text-sm text-purple-700 dark:text-purple-400 font-medium animate-fade-in">Las facturas se acumularán sin marcarse como "Vencidas" hasta que tú decidas realizar el pago grupal.</p>
+                    <p className="text-sm text-purple-700 dark:text-purple-400 font-medium animate-fade-in">Las facturas se acumularán sin marcarse como "Vencidas" hasta que tú decidas realizar el pago grupal.</p>
                   )}
                 </div>
               </div>
@@ -272,7 +273,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
 
         {/* CORREOS Y COMUNICACIÓN AUTOMÁTICA */}
         <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
-           <h3 className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mb-4 border-b border-gray-100 dark:border-slate-700 pb-3 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mb-4 border-b border-gray-100 dark:border-slate-700 pb-3 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             Correos Electrónicos (Para envíos automáticos)
           </h3>
@@ -305,15 +306,15 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
                 </select>
                 <input type="text" placeholder="Nombre completo" value={contacto.nombre} onChange={(e) => actualizarContacto(contacto.id, 'nombre', e.target.value)} className="flex-1 bg-white dark:bg-[#1e2433] border border-gray-300 dark:border-slate-600 rounded-lg p-2 text-sm text-gray-900 dark:text-white outline-none" />
                 <div className="flex gap-2 w-full md:w-auto">
-                   <input type="tel" placeholder="Teléfono" value={contacto.telefono} onChange={(e) => actualizarContacto(contacto.id, 'telefono', e.target.value)} className="w-32 bg-white dark:bg-[#1e2433] border border-gray-300 dark:border-slate-600 rounded-lg p-2 text-sm text-gray-900 dark:text-white outline-none" />
-                   
-                   {/* NUEVO: Checkbox para WhatsApp */}
-                   <label className="flex items-center justify-center p-2 bg-white dark:bg-[#1e2433] border border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer" title="¿Tiene WhatsApp?">
-                     <input type="checkbox" checked={contacto.esWhatsApp} onChange={(e) => actualizarContacto(contacto.id, 'esWhatsApp', e.target.checked)} className="w-4 h-4 text-emerald-500 rounded border-gray-300 cursor-pointer" />
-                     <svg className={`w-4 h-4 ml-1 ${contacto.esWhatsApp ? 'text-emerald-500' : 'text-gray-300 dark:text-slate-600'}`} fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.571-.012c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                   </label>
-                   
-                   <button type="button" onClick={() => eliminarContacto(contacto.id)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition" title="Eliminar"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                  <input type="tel" placeholder="Teléfono" value={contacto.telefono} onChange={(e) => actualizarContacto(contacto.id, 'telefono', e.target.value)} className="w-32 bg-white dark:bg-[#1e2433] border border-gray-300 dark:border-slate-600 rounded-lg p-2 text-sm text-gray-900 dark:text-white outline-none" />
+
+                  {/* NUEVO: Checkbox para WhatsApp */}
+                  <label className="flex items-center justify-center p-2 bg-white dark:bg-[#1e2433] border border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer" title="¿Tiene WhatsApp?">
+                    <input type="checkbox" checked={contacto.esWhatsApp} onChange={(e) => actualizarContacto(contacto.id, 'esWhatsApp', e.target.checked)} className="w-4 h-4 text-emerald-500 rounded border-gray-300 cursor-pointer" />
+                    <svg className={`w-4 h-4 ml-1 ${contacto.esWhatsApp ? 'text-emerald-500' : 'text-gray-300 dark:text-slate-600'}`} fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.571-.012c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" /></svg>
+                  </label>
+
+                  <button type="button" onClick={() => eliminarContacto(contacto.id)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition" title="Eliminar"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                 </div>
               </div>
             ))}
@@ -323,7 +324,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
         {/* BANCOS Y NOTAS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
-             <div className="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">
+            <div className="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">
               <h3 className="text-lg font-bold text-orange-600 dark:text-orange-400">Cuentas Bancarias</h3>
               <button type="button" onClick={agregarBanco} className="text-sm font-bold text-orange-600 bg-orange-50 dark:bg-orange-900/30 px-3 py-1.5 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 transition">+ Añadir Cuenta</button>
             </div>
@@ -358,7 +359,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
           ) : esModoEdicion ? 'Guardar Cambios' : 'Crear Proveedor'}
         </button>
       </div>
-      
+
       {/* MODAL DE ÉXITO */}
       {mostrarModalExito && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
@@ -376,7 +377,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
           </div>
         </div>
       )}
-      
+
     </div>
   );
 }

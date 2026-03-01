@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 const { ipcRenderer } = window.require('electron');
 
-export default function Importador({ alVolver, modoOscuro, toggleTema, irAProveedores }) {
+export default function Importador({ alVolver, modoOscuro, toggleTema, irAProveedores, irAClientes }) {
 
   const [archivosEnEspera, setArchivosEnEspera] = useState([]);
   const [filaExpandida, setFilaExpandida] = useState(null); // ESTADO NUEVO: Para saber qué fila está abierta
@@ -50,8 +50,9 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
       let datosFactura = {
         id: Date.now() + Math.random(),
         contraparte: 'Desconocido', rfcContraparte: '---', folio: 'Sin Folio', total: 0.00,
+        fecha: new Date().toISOString(), // AGREGADO: Previene crasheos en el react render si entra puro PDF
         tipo: 'Desconocido', tipoOperacion: 'Compra', xmlListo: !!grupo.xml, pdfListo: !!grupo.pdf,
-        estado: 'procesando', mensaje: 'Procesando...', conceptos: [] // Añadimos conceptos
+        estado: 'procesando', mensaje: 'Procesando...', conceptos: []
       };
 
       // 1. ASPIRAMOS EL XML A MEMORIA INMEDIATAMENTE
@@ -128,31 +129,37 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
       }
 
       // 3. VALIDACIÓN DE DUPLICADOS EN DISCO DURO Y ESTADOS
-      if (datosFactura.estado !== 'error' && datosFactura.xmlListo) {
-        let anio = '2025', mes = '01', dia = '01';
-        if (datosFactura.fecha) {
-          const partes = datosFactura.fecha.split('T')[0].split('-');
-          if (partes.length === 3) { anio = partes[0]; mes = partes[1]; dia = partes[2]; }
-        }
+      if (datosFactura.estado !== 'error') {
+        if (datosFactura.xmlListo) {
+          let anio = '2025', mes = '01', dia = '01';
+          if (datosFactura.fecha) {
+            const partes = datosFactura.fecha.split('T')[0].split('-');
+            if (partes.length === 3) { anio = partes[0]; mes = partes[1]; dia = partes[2]; }
+          }
 
-        const folioSeguro = datosFactura.folio.replace(/[<>:"/\\|?*]+/g, '_');
+          const folioSeguro = datosFactura.folio.replace(/[<>:"/\\|?*]+/g, '_');
 
-        // Consultamos al backend si ya existe el archivo
-        const existe = await ipcRenderer.invoke('verificar-duplicado', {
-          tipoOperacion: datosFactura.tipoOperacion,
-          contraparte: datosFactura.contraparte,
-          anio, mes, dia, folioSeguro
-        });
+          // Consultamos al backend si ya existe el archivo
+          const existe = await ipcRenderer.invoke('verificar-duplicado', {
+            tipoOperacion: datosFactura.tipoOperacion,
+            contraparte: datosFactura.contraparte,
+            anio, mes, dia, folioSeguro
+          });
 
-        if (existe) {
-          datosFactura.estado = 'duplicado';
-          datosFactura.mensaje = 'Ya existe en tu bóveda. Será ignorada para evitar dobles pagos.';
-        } else if (datosFactura.pdfListo) {
-          datosFactura.estado = 'listo';
-          datosFactura.mensaje = esUnParPerfecto ? '¡Emparejados inteligentemente! Listos para archivar.' : 'XML y PDF emparejados por nombre. Listo.';
-        } else {
+          if (existe) {
+            datosFactura.estado = 'duplicado';
+            datosFactura.mensaje = 'Ya existe en tu bóveda. Será ignorada para evitar dobles pagos.';
+          } else if (datosFactura.pdfListo) {
+            datosFactura.estado = 'listo';
+            datosFactura.mensaje = esUnParPerfecto ? '¡Emparejados inteligentemente! Listos para archivar.' : 'XML y PDF emparejados por nombre. Listo.';
+          } else {
+            datosFactura.estado = 'advertencia';
+            datosFactura.mensaje = 'Falta el archivo PDF visual. Solo se archivará el XML.';
+          }
+        } else if (datosFactura.pdfListo && !datosFactura.xmlListo) {
+          // --- CASO HUÉRFANO (SÓLO PDF) ---
           datosFactura.estado = 'advertencia';
-          datosFactura.mensaje = 'Falta el archivo PDF visual. Solo se archivará el XML.';
+          datosFactura.mensaje = 'Solo detectamos el PDF visual. Por favor añade los datos manualmente.';
         }
       }
 
@@ -452,10 +459,11 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
               </button>
 
               <button
-                disabled
-                className="w-full bg-gray-50 dark:bg-slate-800 text-gray-400 dark:text-slate-500 font-bold py-3 px-4 rounded-xl cursor-not-allowed border border-dashed border-gray-200 dark:border-slate-700 flex justify-center items-center gap-2"
+                onClick={() => { setResumenExito(null); if (irAClientes) irAClientes(); }}
+                className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-xl transition shadow-md flex justify-center items-center gap-2"
               >
-                Ir a Directorio de Clientes <span className="text-[10px] bg-gray-200 dark:bg-slate-700 px-2 py-0.5 rounded-full">Próximamente</span>
+                Ir a Directorio de Clientes
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
               </button>
 
               <button

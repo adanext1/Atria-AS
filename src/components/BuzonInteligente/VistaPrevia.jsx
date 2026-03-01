@@ -44,7 +44,18 @@ export default function VistaPrevia({ correoSeleccionado, setCorreoSeleccionado,
 
       {/* CUERPO DEL CORREO */}
       <div className="p-4 lg:p-6 border-b border-gray-100 dark:border-slate-700 shrink-0">
-        <p className="text-gray-700 dark:text-gray-300 text-xs lg:text-sm leading-relaxed whitespace-pre-wrap">{correoSeleccionado.mensaje}</p>
+        {correoSeleccionado.mensajeHtml ? (
+          <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 overflow-auto max-h-96 border border-gray-200 dark:border-slate-700">
+            <iframe
+              srcDoc={correoSeleccionado.mensajeHtml}
+              sandbox="allow-same-origin"
+              className="w-full min-h-[300px] border-none bg-white"
+              title="Visor Email HTML"
+            />
+          </div>
+        ) : (
+          <p className="text-gray-700 dark:text-gray-300 text-xs lg:text-sm leading-relaxed whitespace-pre-wrap">{correoSeleccionado.mensaje}</p>
+        )}
       </div>
 
       {/* DETECTOR DE XML O PDF INTELIGENTE */}
