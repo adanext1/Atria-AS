@@ -29,6 +29,29 @@ export default function Proveedores({ alVolver, modoOscuro, toggleTema, irANuevo
     cargarDatos();
   }, []);
 
+  // --- LÓGICA DE PERSISTENCIA DE SCROLL ---
+  useEffect(() => {
+    if (!cargando) {
+      const scrollGuardado = localStorage.getItem('scrollPosProveedores');
+      if (scrollGuardado) {
+        // Un pequeño delay asegura que el navegador haya terminado de renderizar el layout
+        setTimeout(() => {
+          window.scrollTo({ top: parseInt(scrollGuardado), behavior: 'instant' });
+        }, 50);
+      }
+    }
+  }, [cargando]);
+
+  useEffect(() => {
+    const guardarScroll = () => {
+      // Guardamos la posición actual cada vez que el usuario mueve la rueda
+      localStorage.setItem('scrollPosProveedores', window.scrollY.toString());
+    };
+
+    window.addEventListener('scroll', guardarScroll);
+    return () => window.removeEventListener('scroll', guardarScroll);
+  }, []);
+
   const formatearDinero = (cantidad) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(cantidad || 0);
 
   // --- LÓGICA DE FILTROS MEJORADA (Búsqueda + Categoría) ---
@@ -55,83 +78,94 @@ export default function Proveedores({ alVolver, modoOscuro, toggleTema, irANuevo
   const diasMapa = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const diaHoy = diasMapa[new Date().getDay()];
   return (
-    <div className="min-h-screen p-4 md:p-8 font-sans max-w-7xl mx-auto pb-20">
+    <div className="min-h-screen p-4 md:p-8 font-sans max-w-7xl mx-auto pb-20 relative overflow-x-hidden">
 
-      {/* HEADER SUPERIOR */}
-      <header className="animate-fade-in-up flex justify-between items-center mb-6 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
-        <button
-          onClick={alVolver}
-          className="group flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 font-semibold transition"
-        >
-          <div className="bg-gray-100 dark:bg-slate-700 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/40 p-1.5 rounded-lg transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-          </div>
-          Volver al Dashboard
-        </button>
-        <div className="flex items-center gap-4">
-          <Tooltip texto="Cambia entre modo Claro y Oscuro para descansar la vista.">
-            <button onClick={toggleTema} className="p-2 rounded-xl bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition text-sm shadow-sm w-full">
-              {modoOscuro ? '☀️ Tema Claro' : '🌙 Tema Oscuro'}
-            </button>
-          </Tooltip>
+      {/* Elementos decorativos de fondo (Glassmorphism orbs) */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 fixed">
+        <div className="absolute top-0 right-1/3 w-80 h-80 bg-purple-400/20 dark:bg-purple-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-slow"></div>
+        <div className="absolute top-1/2 left-10 w-[24rem] h-[24rem] bg-indigo-400/20 dark:bg-indigo-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-reverse delay-1000"></div>
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-fuchsia-400/20 dark:bg-fuchsia-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-slow delay-2000"></div>
+      </div>
+
+      <div className="relative z-10 flex flex-col items-center mb-8">
+        {/* Botón de regreso integrado tipo floating icon */}
+        <div className="w-full flex justify-start mb-4">
+          <button
+            onClick={alVolver}
+            className="group flex items-center gap-2 px-4 py-2.5 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-700/70 backdrop-blur-md rounded-2xl shadow-sm border border-white/50 dark:border-slate-600/40 transition-all hover:scale-105 hover:shadow-md text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400"
+          >
+            <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
+            <span className="font-bold text-sm">Volver al Centro de Control</span>
+          </button>
         </div>
-      </header>
 
-      {/* PANEL DE RESUMEN GLOBAL */}
-      <div className="animate-fade-in-up delay-100 mb-8 bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-800/80 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 dark:bg-purple-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
-          <div>
-            <h2 className="text-3xl font-black text-gray-800 dark:text-white flex items-center gap-3 tracking-tight">Directorio de Proveedores</h2>
-            <p className="text-gray-500 dark:text-slate-400 mt-2 text-sm md:text-base max-w-xl">
-              Aquí se guardan las empresas de tus facturas XML. Selecciona una para ver su historial, agruparlas por producto y administrar pagos.
-            </p>
-          </div>
-          {!cargando && proveedores.length > 0 && (
-            <div className="flex gap-4 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-              <Tooltip texto="Suma histórica de todas las compras de todos los proveedores juntos.">
-                <div className="bg-white dark:bg-slate-900 px-4 py-3 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm min-w-[140px] flex-shrink-0 cursor-help">
-                  <p className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 mb-1">Total Histórico</p>
-                  <p className="text-lg font-black text-purple-600 dark:text-purple-400">{formatearDinero(totalHistoricoGeneral)}</p>
-                </div>
-              </Tooltip>
+        {/* PANEL DE RESUMEN GLOBAL GLASSMORPHISM */}
+        <div className="w-full animate-fade-in-up bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-[2.5rem] p-8 lg:p-10 shadow-lg border border-white/50 dark:border-slate-700/50 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent dark:from-white/5 dark:to-transparent opacity-100 pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 dark:bg-purple-400/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none transition-transform duration-700 group-hover:scale-150"></div>
+
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10">
+            <div className="flex items-start gap-5">
+              <div className="inline-flex items-center justify-center p-4 bg-purple-100/50 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-3xl shadow-sm border border-purple-200/50 dark:border-purple-500/30">
+                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+              </div>
+              <div>
+                <h2 className="text-4xl font-black text-gray-800 dark:text-white tracking-tight leading-tight">Directorio de<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400">Proveedores</span></h2>
+                <p className="text-gray-500 dark:text-slate-400 mt-3 text-base lg:text-lg max-w-xl font-medium leading-relaxed">
+                  Administra las empresas que te facturan. Revisa su historial, agrupa sus productos y controla los pagos pendientes.
+                </p>
+              </div>
             </div>
-          )}
+
+            {!cargando && proveedores.length > 0 && (
+              <div className="flex gap-4 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
+                <Tooltip texto="Suma histórica de todas las compras de todos los proveedores juntos.">
+                  <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-md px-6 py-4 rounded-[1.5rem] border border-white/60 dark:border-slate-700/60 shadow-md min-w-[180px] flex-shrink-0 cursor-help transform transition-all hover:-translate-y-1 hover:shadow-xl hover:bg-white/90 dark:hover:bg-slate-800/80">
+                    <p className="text-xs uppercase font-black tracking-widest text-gray-500 dark:text-slate-400 mb-1 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      Total Histórico
+                    </p>
+                    <p className="text-2xl font-black text-purple-700 dark:text-purple-400 tracking-tight">{formatearDinero(totalHistoricoGeneral)}</p>
+                  </div>
+                </Tooltip>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* BARRA DE BÚSQUEDA Y FILTRO DE GRUPOS */}
-      <div className="animate-fade-in-up delay-150 flex flex-col lg:flex-row w-full gap-4 mb-6">
+      {/* BARRA DE BÚSQUEDA Y FILTRO DE GRUPOS GLASSMORPHISM */}
+      <div className="relative z-10 animate-fade-in-up delay-150 flex flex-col lg:flex-row w-full gap-4 mb-8">
         {/* Buscador de Texto */}
         <div className="relative flex-1 group z-10">
-          <svg className="w-5 h-5 absolute left-4 top-3.5 text-gray-400 group-focus-within:text-purple-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <svg className="w-5 h-5 absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
           <input
             type="text"
             placeholder="Buscar empresa o RFC..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-sm font-medium text-gray-900 dark:text-white outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-sm"
+            className="w-full pl-14 pr-4 py-4 bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl text-base font-semibold text-gray-900 dark:text-white outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-purple-500/20 transition-all shadow-sm placeholder-gray-400 dark:placeholder-gray-500"
           />
         </div>
 
         {/* Nuevo Filtro de Categorías */}
-        <div className="relative md:w-64 z-10">
+        <div className="relative md:w-72 z-10">
           <select
             value={filtroGrupo}
             onChange={(e) => setFiltroGrupo(e.target.value)}
-            className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-200 outline-none focus:border-purple-500 transition-all shadow-sm appearance-none cursor-pointer"
+            className="w-full pl-5 pr-10 py-4 bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl text-base font-bold text-gray-700 dark:text-gray-200 outline-none focus:border-purple-500 transition-all shadow-sm appearance-none cursor-pointer focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-purple-500/20"
           >
-            {gruposUnicos.map(grupo => <option key={grupo} value={grupo}>{grupo === 'Todos' ? '📦 Todas las Categorías' : `📦 Grupo: ${grupo}`}</option>)}
+            {gruposUnicos.map(grupo => <option key={grupo} value={grupo} className="bg-white dark:bg-slate-800">{grupo === 'Todos' ? '📦 Todas las Categorías' : `📦 Grupo: ${grupo}`}</option>)}
           </select>
-          <svg className="w-5 h-5 absolute right-4 top-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+          <svg className="w-5 h-5 absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
         </div>
 
         {/* Botón clásico manual por si acaso */}
         <button
           onClick={irANuevoProveedor}
-          className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-2xl shadow-md transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 whitespace-nowrap z-10"
+          className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black py-4 px-8 rounded-2xl shadow-lg shadow-purple-500/30 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/40 flex items-center justify-center gap-3 whitespace-nowrap z-10 border border-purple-400/50"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"></path></svg>
           <span className="hidden sm:inline">Dar de alta proveedor</span>
         </button>
       </div>
@@ -143,21 +177,21 @@ export default function Proveedores({ alVolver, modoOscuro, toggleTema, irANuevo
           <p className="text-gray-500 font-medium animate-pulse">Leyendo Bóveda...</p>
         </div>
       ) : (
-        <main className="animate-fade-in-up delay-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-
+        <main className="animate-fade-in-up delay-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative z-10">
           {/* ========================================================= */}
           {/* TARJETA GIGANTE ANIMADA PARA AGREGAR NUEVO PROVEEDOR MANUAL */}
           {/* ========================================================= */}
           <div
             onClick={irANuevoProveedor}
-            className="group bg-gradient-to-br from-blue-50 to-white dark:from-slate-800/80 dark:to-slate-900 rounded-[32px] border-2 border-dashed border-blue-300 dark:border-blue-600/60 hover:border-blue-500 dark:hover:border-blue-400 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 flex flex-col items-center justify-center p-6 cursor-pointer min-h-[380px] hover:-translate-y-2"
+            className="group bg-gradient-to-br from-white/40 to-white/10 dark:from-slate-800/40 dark:to-slate-900/40 backdrop-blur-xl rounded-[2rem] border-2 border-dashed border-blue-300 dark:border-blue-500/50 hover:border-blue-500 dark:hover:border-blue-400 shadow-sm hover:shadow-2xl hover:shadow-blue-500/20 hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-300 flex flex-col items-center justify-center p-6 cursor-pointer min-h-[380px] hover:-translate-y-2 relative overflow-hidden"
           >
+            <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
             {/* Círculo que "late" o respira suavemente */}
-            <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mb-4 transition-transform group-hover:scale-110 animate-[pulse_3s_ease-in-out_infinite]">
-              <svg className="w-10 h-10 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"></path></svg>
+            <div className="w-24 h-24 bg-white/70 dark:bg-slate-800/80 backdrop-blur-md rounded-full shadow-[0_10px_25px_-5px_rgba(59,130,246,0.3)] flex items-center justify-center mb-6 transition-transform group-hover:scale-110 animate-[pulse_3s_ease-in-out_infinite] border border-white dark:border-slate-700">
+              <svg className="w-12 h-12 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"></path></svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2 text-center group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Dar de alta proveedor</h3>
-            <p className="text-sm text-gray-500 dark:text-slate-400 text-center px-4">
+            <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-2 text-center group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Dar de alta proveedor</h3>
+            <p className="text-base text-gray-500 dark:text-slate-400 text-center px-4 font-medium">
               Registra una empresa manualmente si no cuentas con sus archivos XML.
             </p>
           </div>
@@ -184,12 +218,9 @@ export default function Proveedores({ alVolver, modoOscuro, toggleTema, irANuevo
               const fechaFactura = prov.metricas?.ultimaCompra ? new Date(prov.metricas.ultimaCompra.split('T')[0]) : new Date();
 
               if (tipoPago === 'variable') {
-                // MODO 1: VARIABLE (Nunca se vence solo, siempre se acumula hasta que tú decides pagar)
                 estadoCredito = 'acumulando';
                 mensajeSemáforo = 'Deuda acumulándose. Paga cuando acuerden.';
-
               } else if (tipoPago === 'contado') {
-                // MODO 2: CONTADO (Se vence el mismo día. Si la factura es de ayer, ya es Rojo)
                 diasRestantes = Math.ceil((fechaFactura.getTime() - fechaHoy.getTime()) / (1000 * 3600 * 24));
                 if (diasRestantes < 0) {
                   estadoCredito = 'vencido';
@@ -198,9 +229,7 @@ export default function Proveedores({ alVolver, modoOscuro, toggleTema, irANuevo
                   estadoCredito = 'por_vencer';
                   mensajeSemáforo = 'Pago inmediato requerido hoy.';
                 }
-
               } else if (tipoPago === 'neto') {
-                // MODO 3: CRÉDITO POR DÍAS (Suma X días a la factura)
                 const diasCredito = parseInt(prov.diasCreditoNeto) || 0;
                 const fechaVencimiento = new Date(fechaFactura);
                 fechaVencimiento.setDate(fechaVencimiento.getDate() + diasCredito);
@@ -217,18 +246,14 @@ export default function Proveedores({ alVolver, modoOscuro, toggleTema, irANuevo
                   estadoCredito = 'al_dia';
                   mensajeSemáforo = `Tienes ${diasRestantes} días de crédito restantes.`;
                 }
-
               } else if (tipoPago === 'ciclico') {
-                // MODO 4: CÍCLICO (Busca el próximo "Lunes" o "Martes" que toca pagar)
                 const diasSemanaMapa = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
-                const diaObjetivo = diasSemanaMapa[prov.diaPagoFijo] || 1; // Por defecto Lunes si falla
+                const diaObjetivo = diasSemanaMapa[prov.diaPagoFijo] || 1;
                 const semanasFrecuencia = parseInt(prov.frecuenciaSemanas) || 1;
 
-                // Calculamos cuándo es el próximo día de pago desde la fecha de la factura
                 let proximoPago = new Date(fechaFactura);
                 proximoPago.setDate(proximoPago.getDate() + ((diaObjetivo + 7 - proximoPago.getDay()) % 7));
 
-                // Si la factura cayó el mismo día de pago, lo mandamos al siguiente ciclo
                 if (proximoPago.getTime() === fechaFactura.getTime()) {
                   proximoPago.setDate(proximoPago.getDate() + (semanasFrecuencia * 7));
                 }
@@ -237,13 +262,13 @@ export default function Proveedores({ alVolver, modoOscuro, toggleTema, irANuevo
 
                 if (diasRestantes < 0) {
                   estadoCredito = 'vencido';
-                  mensajeSemáforo = `El ciclo de pago pasado expiró.`;
+                  mensajeSemáforo = `El ciclo pasado expiró.`;
                 } else if (diasRestantes <= 2) {
                   estadoCredito = 'por_vencer';
-                  mensajeSemáforo = `Tu pago de ciclo es en ${diasRestantes} días.`;
+                  mensajeSemáforo = `Pago de ciclo en ${diasRestantes} días.`;
                 } else {
                   estadoCredito = 'al_dia';
-                  mensajeSemáforo = `Acumulando para tu pago del próximo ${prov.diaPagoFijo}.`;
+                  mensajeSemáforo = `Acumulando para tu pago (${prov.diaPagoFijo}).`;
                 }
               }
             }
@@ -253,33 +278,37 @@ export default function Proveedores({ alVolver, modoOscuro, toggleTema, irANuevo
             const diasVisita = prov.diasVisita || [];
             const visitaHoy = diasVisita.includes(diaHoy);
 
-            // --- LÓGICA DE ESTILOS DE LA TARJETA ---
-            let estilosTarjeta = "border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.05)]";
+            // --- LÓGICA DE ESTILOS DE LA TARJETA PREDOMINANTE ---
+            let estilosTarjeta = "border-white/60 dark:border-slate-700/50 shadow-lg hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:bg-white/80 dark:hover:bg-slate-800/80";
 
             if (estadoCredito === 'vencido') {
-              estilosTarjeta = "border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-[pulse_2s_ease-in-out_infinite]";
+              estilosTarjeta = "border-red-500/80 shadow-[0_10px_30px_-10px_rgba(239,68,68,0.4)] animate-[pulse_3s_ease-in-out_infinite] hover:shadow-[0_20px_40px_-15px_rgba(239,68,68,0.5)] bg-red-50/70 dark:bg-red-900/20";
             } else if (estadoCredito === 'por_vencer' || visitaHoy) {
-              estilosTarjeta = "border-2 border-yellow-400 dark:border-yellow-500 shadow-[0_0_20px_rgba(250,204,21,0.2)]";
+              estilosTarjeta = "border-yellow-400/80 dark:border-yellow-500/80 shadow-[0_10px_30px_-10px_rgba(250,204,21,0.3)] bg-yellow-50/70 dark:bg-yellow-900/20";
             } else if (estadoCredito === 'al_dia') {
-              estilosTarjeta = "border-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]";
+              estilosTarjeta = "border-blue-400/80 shadow-[0_10px_30px_-10px_rgba(59,130,246,0.3)] hover:shadow-[0_20px_40px_-15px_rgba(59,130,246,0.4)]";
             } else if (estadoCredito === 'acumulando') {
-              estilosTarjeta = "border border-indigo-400/80 shadow-[0_0_10px_rgba(99,102,241,0.2)] border-dashed";
+              estilosTarjeta = "border-indigo-400/60 shadow-[0_10px_30px_-10px_rgba(99,102,241,0.3)] border-dashed";
             }
 
             return (
               <div
                 key={prov.id}
-                className={`group bg-white dark:bg-[#1e2433] rounded-[24px] p-6 flex flex-col relative transition-transform duration-300 hover:-translate-y-1.5 hover:shadow-2xl ${estilosTarjeta}`}
+                className={`group bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-[2rem] border p-6 flex flex-col relative transition-all duration-300 hover:-translate-y-2 overflow-hidden ${estilosTarjeta}`}
               >
+
+                {/* Overlay difuminado de color suave en el fondo de la tarjeta al hacer hover */}
+                {estadoCredito === 'al_dia' && <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-[2rem]"></div>}
+
                 {/* ZONA DE LOGO */}
                 <div
                   onClick={() => irADetalleProveedor(prov)}
-                  className="bg-gray-100 dark:bg-[#e2e8f0] rounded-xl h-28 mt-2 mb-5 flex items-center justify-center p-4 overflow-hidden shadow-inner cursor-pointer group/logo"
+                  className="bg-white/60 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl h-32 mt-2 mb-6 flex items-center justify-center p-4 overflow-hidden shadow-inner cursor-pointer group/logo border border-white/50 dark:border-slate-700/50 relative z-10"
                 >
                   {prov.logo ? (
-                    <img src={prov.logo} alt="Logo" className="max-w-full max-h-full object-contain drop-shadow-sm transition-transform group-hover/logo:scale-110 group-hover:scale-105" />
+                    <img src={prov.logo} alt="Logo" className="max-w-[80%] max-h-full object-contain filter drop-shadow-md transition-transform duration-500 group-hover/logo:scale-110" />
                   ) : (
-                    <span className={`text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br ${colorFondo} select-none tracking-widest uppercase transition-transform group-hover/logo:scale-110`}>
+                    <span className={`text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br ${colorFondo} select-none tracking-widest uppercase transition-transform duration-500 group-hover/logo:scale-110 drop-shadow-sm`}>
                       {inicial}
                     </span>
                   )}
@@ -288,65 +317,60 @@ export default function Proveedores({ alVolver, modoOscuro, toggleTema, irANuevo
                 {/* TÍTULO */}
                 <h3
                   onClick={() => irADetalleProveedor(prov)}
-                  className="text-gray-800 dark:text-white font-black text-xl leading-tight mb-4 line-clamp-2 transition-colors hover:text-purple-600 dark:hover:text-purple-400 cursor-pointer group-hover:text-purple-600 dark:group-hover:text-purple-400"
+                  className="text-gray-900 dark:text-white font-black text-xl leading-tight mb-4 tracking-tight line-clamp-2 transition-colors hover:text-purple-600 dark:hover:text-purple-400 cursor-pointer relative z-10"
                   title={prov.nombre}
                 >
                   {prov.nombre}
                 </h3>
 
                 {/* BADGES (Estado, Categoría y Visita) */}
-                <div className="flex items-center gap-2 mb-6 flex-wrap">
+                <div className="flex items-center gap-2 mb-6 flex-wrap relative z-10">
                   <Tooltip texto={mensajeSemáforo}>
-                    <span className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 cursor-help transition-colors ${estadoCredito === 'vencido' ? 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/30' :
-                        estadoCredito === 'por_vencer' ? 'text-yellow-800 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/30' :
-                          estadoCredito === 'al_dia' ? 'text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30' :
-                            estadoCredito === 'acumulando' ? 'text-indigo-700 bg-indigo-100 dark:text-indigo-400 dark:bg-indigo-900/30' :
-                              'text-emerald-700 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-900/30'
+                    <span className={`text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 cursor-help shadow-sm border ${estadoCredito === 'vencido' ? 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-500/20 border-red-200 dark:border-red-500/30' :
+                      estadoCredito === 'por_vencer' ? 'text-yellow-800 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-500/20 border-yellow-200 dark:border-yellow-500/30' :
+                        estadoCredito === 'al_dia' ? 'text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-500/20 border-blue-200 dark:border-blue-500/30' :
+                          estadoCredito === 'acumulando' ? 'text-indigo-700 bg-indigo-100 dark:text-indigo-300 dark:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30' :
+                            'text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/20 border-emerald-200 dark:border-emerald-500/30'
                       }`}>
-                      <span className={`w-2 h-2 rounded-full ${estadoCredito === 'vencido' ? 'bg-red-500' :
-                          estadoCredito === 'por_vencer' ? 'bg-yellow-500' :
-                            estadoCredito === 'al_dia' ? 'bg-blue-500' :
-                              estadoCredito === 'acumulando' ? 'bg-indigo-500' : 'bg-emerald-500'
+                      <span className={`w-2.5 h-2.5 rounded-full shadow-inner ${estadoCredito === 'vencido' ? 'bg-red-500' :
+                        estadoCredito === 'por_vencer' ? 'bg-yellow-500' :
+                          estadoCredito === 'al_dia' ? 'bg-blue-500' :
+                            estadoCredito === 'acumulando' ? 'bg-indigo-500' : 'bg-emerald-500'
                         }`}></span>
-                      {estadoCredito === 'vencido' ? 'Pago Vencido' :
+                      {estadoCredito === 'vencido' ? 'Vencido' :
                         estadoCredito === 'por_vencer' ? 'Vence Pronto' :
                           estadoCredito === 'al_dia' ? 'Crédito Vigente' :
                             estadoCredito === 'acumulando' ? 'Acumulando' : 'Al Día'}
                     </span>
                   </Tooltip>
 
-                  <span className="text-xs px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 dark:bg-[#2a3441] dark:text-slate-300 font-bold tracking-wider uppercase border border-slate-200 dark:border-slate-600/50 truncate max-w-[120px]" title={prov.grupo || 'Sin agrupar'}>
-                    📦 {prov.grupo || 'General'}
+                  <span className="text-xs px-3 py-1.5 rounded-xl bg-white/60 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 font-bold tracking-wider uppercase border border-gray-200/50 dark:border-slate-600/50 truncate max-w-[120px] shadow-sm backdrop-blur-md" title={prov.grupo || 'Sin agrupar'}>
+                    📦 {prov.grupo || 'Ninguno'}
                   </span>
 
                   {visitaHoy && estadoCredito !== 'vencido' && (
-                    <span className="text-xs px-3 py-1.5 rounded-full bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 font-bold tracking-wider uppercase border border-yellow-300 dark:border-yellow-500/50 flex items-center gap-1.5 shadow-[0_0_10px_rgba(250,204,21,0.3)] animate-pulse">
-                      ¡Visita Hoy!
-                    </span>
-                  )}
-                  {visitaHoy && estadoCredito === 'vencido' && (
-                    <span className="text-xs px-3 py-1.5 rounded-full bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-bold tracking-wider uppercase border border-red-300 dark:border-red-500/50 flex items-center gap-1.5 shadow-[0_0_10px_rgba(239,68,68,0.3)] animate-pulse">
-                      ⚠️ ¡COBRADOR HOY!
+                    <span className="text-xs px-3 py-1.5 rounded-xl bg-gradient-to-r from-yellow-300 to-amber-400 text-yellow-900 font-black tracking-wider uppercase shadow-md animate-pulse">
+                      ¡HAY VISITA!
                     </span>
                   )}
                 </div>
 
-                {/* CAJA DE SALDO PENDIENTE */}
+                {/* CAJA DE SALDO PENDIENTE GLASS */}
                 <Tooltip texto="Monto pendiente a pagar actualmente." anchoTotal={true}>
-                  <div className={`w-full border rounded-xl p-4 mb-6 bg-gray-50 dark:bg-[#1a1f2b] flex justify-between items-center cursor-help transition-colors ${estadoCredito === 'vencido' ? 'border-red-400/50 dark:border-red-500/30 bg-red-50/50 dark:bg-red-900/10' :
-                      (estadoCredito === 'al_dia' || estadoCredito === 'acumulando') ? 'border-blue-400/50 dark:border-blue-500/30 bg-blue-50/50 dark:bg-blue-900/10' :
-                        'border-gray-200 dark:border-slate-600/50'
+                  <div className={`w-full border rounded-2xl p-4 mb-6 relative z-10 backdrop-blur-md flex justify-between items-center cursor-help transition-all shadow-inner ${estadoCredito === 'vencido' ? 'border-red-300/80 dark:border-red-500/50 bg-red-100/50 dark:bg-red-900/30' :
+                    (estadoCredito === 'al_dia' || estadoCredito === 'acumulando') ? 'border-blue-200/80 dark:border-blue-500/30 bg-white/70 dark:bg-blue-900/20' :
+                      'border-white/60 dark:border-slate-600/50 bg-white/50 dark:bg-slate-800/50'
                     }`}>
-                    <span className={`text-sm flex items-center gap-1.5 font-medium ${estadoCredito === 'vencido' ? 'text-red-600 dark:text-red-400' :
-                        (estadoCredito === 'al_dia' || estadoCredito === 'acumulando') ? 'text-blue-600 dark:text-blue-400' :
-                          'text-gray-500 dark:text-slate-400'
+                    <span className={`text-xs lg:text-sm flex items-center gap-1.5 font-bold tracking-wide ${estadoCredito === 'vencido' ? 'text-red-800 dark:text-red-300' :
+                      (estadoCredito === 'al_dia' || estadoCredito === 'acumulando') ? 'text-blue-800 dark:text-blue-300' :
+                        'text-gray-600 dark:text-slate-400'
                       }`}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                      Saldo Pendiente:
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      {estadoCredito === 'vencido' ? 'Deuda Vencida:' : 'Saldo Pendiente:'}
                     </span>
-                    <span className={`font-bold text-lg tracking-wide ${estadoCredito === 'vencido' ? 'text-red-600 dark:text-red-400' :
-                        (estadoCredito === 'al_dia' || estadoCredito === 'acumulando') ? 'text-blue-600 dark:text-blue-400' :
-                          'text-gray-800 dark:text-white'
+                    <span className={`font-black text-xl tracking-tight ${estadoCredito === 'vencido' ? 'text-red-600 dark:text-red-400' :
+                      (estadoCredito === 'al_dia' || estadoCredito === 'acumulando') ? 'text-blue-700 dark:text-blue-400' :
+                        'text-gray-900 dark:text-white'
                       }`}>
                       {formatearDinero(deudaReal)}
                     </span>
@@ -354,40 +378,39 @@ export default function Proveedores({ alVolver, modoOscuro, toggleTema, irANuevo
                 </Tooltip>
 
                 {/* FILAS DE INFORMACIÓN */}
-                <div className="flex flex-col gap-3 text-sm text-gray-500 dark:text-slate-400 mb-8 font-medium px-1">
+                <div className="flex flex-col gap-3 text-sm text-gray-500 dark:text-slate-400 mb-8 font-medium px-2 relative z-10 bg-white/30 dark:bg-slate-900/30 p-4 rounded-2xl backdrop-blur-sm border border-white/40 dark:border-slate-700/30">
                   <div className="flex justify-between items-center">
-                    <span>Visita:</span>
-                    <span className="font-semibold text-right max-w-[150px] truncate text-gray-700 dark:text-slate-200">
-                      {diasVisita.length > 0 ? diasVisita.map(d => d.substring(0, 3)).join(', ') : 'No definido'}
+                    <span className="flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> Visita:</span>
+                    <span className="font-bold text-right max-w-[130px] truncate text-gray-800 dark:text-slate-200">
+                      {diasVisita.length > 0 ? diasVisita.map(d => d.substring(0, 3)).join(', ') : 'ND'}
                     </span>
                   </div>
+                  <div className="border-t border-gray-200/50 dark:border-slate-700/50 my-1"></div>
                   <div className="flex justify-between items-center">
-                    <span>Última factura:</span>
-                    <span className="text-gray-700 dark:text-slate-200 font-semibold">{prov.metricas?.ultimaCompra ? prov.metricas.ultimaCompra.split('T')[0] : 'Sin registro'}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Gasto Total:</span>
-                    <span className="text-gray-700 dark:text-slate-200 font-semibold">{formatearDinero(prov.metricas?.comprasHistoricas)}</span>
+                    <span className="flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Última:</span>
+                    <span className="text-gray-800 dark:text-slate-200 font-bold">{prov.metricas?.ultimaCompra ? prov.metricas.ultimaCompra.split('T')[0] : 'Sin registro'}</span>
                   </div>
                 </div>
 
                 {/* BOTONES INFERIORES */}
-                <div className="flex gap-4 mt-auto">
+                <div className="flex gap-3 mt-auto relative z-10 w-full">
                   <button
                     onClick={() => irADetalleProveedor(prov)}
-                    className={`flex-1 text-sm font-bold py-3.5 rounded-xl transition-colors shadow-sm ${estadoCredito === 'vencido' ? 'bg-red-100 hover:bg-red-600 dark:bg-red-900/40 dark:hover:bg-red-600 text-red-700 hover:text-white dark:text-red-400 dark:hover:text-white' :
-                        (estadoCredito === 'al_dia' || estadoCredito === 'acumulando') ? 'bg-blue-100 hover:bg-blue-600 dark:bg-blue-900/40 dark:hover:bg-blue-600 text-blue-700 hover:text-white dark:text-blue-400 dark:hover:text-white' :
-                          'bg-gray-100 hover:bg-purple-600 dark:bg-[#2a3441] dark:hover:bg-[#323d4d] text-gray-700 hover:text-white dark:text-slate-300 dark:hover:text-white'
+                    className={`flex-1 text-sm font-black py-4 rounded-2xl transition-all shadow-md transform hover:-translate-y-0.5 border ${estadoCredito === 'vencido' ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-red-400' :
+                      (estadoCredito === 'al_dia' || estadoCredito === 'acumulando') ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-blue-500/50 shadow-blue-500/20' :
+                        'bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-800 dark:text-white border-gray-200 dark:border-slate-600'
                       }`}
                   >
-                    {estadoCredito === 'vencido' ? 'Pagar Ahora' : tieneDeuda ? 'Ver Deuda' : 'Estados De Cuenta'}
+                    {estadoCredito === 'vencido' ? 'PAGAR AHORA' : tieneDeuda ? 'Ver Deuda' : 'Ver Detalles'}
                   </button>
-                  <button
-                    onClick={() => irAEditarProveedor(prov)}
-                    className="flex-1 bg-gray-100 hover:bg-blue-600 dark:bg-[#2a3441] dark:hover:bg-[#323d4d] text-gray-700 hover:text-white dark:text-slate-300 dark:hover:text-white text-sm font-bold py-3.5 rounded-xl transition-colors shadow-sm"
-                  >
-                    Editar Info
-                  </button>
+                  <Tooltip texto="Editar información">
+                    <button
+                      onClick={() => irAEditarProveedor(prov)}
+                      className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 hover:text-purple-600 dark:text-slate-300 dark:hover:text-purple-400 p-4 rounded-2xl transition-all shadow-sm border border-gray-200/80 dark:border-slate-600 transform hover:-translate-y-0.5"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    </button>
+                  </Tooltip>
                 </div>
 
               </div>

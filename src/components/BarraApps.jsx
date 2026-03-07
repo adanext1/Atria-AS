@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { inyeccionesPorApp } from '../utils/inyecciones-apps.js';
+import PanelWhatsAppPOS from './PanelWhatsAppPOS.jsx';
 const { ipcRenderer } = window.require('electron');
 
 // ============================================================================
@@ -12,6 +14,9 @@ const VentanaFlotante = ({ app, icono, abierta, encendida, silenciada, reloadTri
   const [puedeRetroceder, setPuedeRetroceder] = useState(false);
   const [historial, setHistorial] = useState([]); // Arreglo de { url, title }
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [boostActivo, setBoostActivo] = useState(false);
+  const [mostrarPOS, setMostrarPOS] = useState(false);
+  const [posData, setPosData] = useState(null);
 
   const webviewRef = useRef(null);
   const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
@@ -65,20 +70,135 @@ const VentanaFlotante = ({ app, icono, abierta, encendida, silenciada, reloadTri
       } catch (e) { }
     };
 
-    wv.addEventListener('did-navigate', actualizarNavegacion);
-    wv.addEventListener('did-navigate-in-page', actualizarNavegacion);
+    const manejarNavegacion = (e) => actualizarNavegacion(e);
+
+    const manejarConsola = (e) => {
+      // Usar console.log como "puente" desde el DOM inyectado hacia React
+      if (e.message && e.message.startsWith('ATRIA_POS_OPEN||')) {
+        try {
+          const payload = JSON.parse(e.message.split('||')[1]);
+          setMostrarPOS(true);
+          setPosData(payload);
+        } catch (err) { console.error("Error parseando POS data", err); }
+      }
+    };
+
+    wv.addEventListener('did-navigate', manejarNavegacion);
+    wv.addEventListener('did-navigate-in-page', manejarNavegacion);
     wv.addEventListener('page-title-updated', registrarTitulo);
     wv.addEventListener('dom-ready', aplicarSilencio);
+    wv.addEventListener('console-message', manejarConsola);
 
     aplicarSilencio();
 
     return () => {
-      wv.removeEventListener('did-navigate', actualizarNavegacion);
-      wv.removeEventListener('did-navigate-in-page', actualizarNavegacion);
+      wv.removeEventListener('did-navigate', manejarNavegacion);
+      wv.removeEventListener('did-navigate-in-page', manejarNavegacion);
       wv.removeEventListener('page-title-updated', registrarTitulo);
       wv.removeEventListener('dom-ready', aplicarSilencio);
+      wv.removeEventListener('console-message', manejarConsola);
     };
   }, [abierta, silenciada]);
+
+  // --- ESCUCHAS PARA EL MODO BOOST ---
+  useEffect(() => {
+    const wv = webviewRef.current;
+    if (!wv) return;
+
+    const aplicarBoost = async () => {
+      // EVITAR RACE CONDITION: el webview debe tener un WebContents asignado antes de inyectar
+      try {
+        if (!wv.getWebContentsId()) return;
+      } catch (e) {
+        return; // AÃºn no estÃ¡ montado en el DOM
+      }
+
+      // Si la app tiene inyecciones disponibles y el boost estÃ¡ prendido
+      if (inyeccionesPorApp[app.baseId] && boostActivo) {
+        let scriptPayload = "";
+
+        // Si el script de encendido es una función (como WhatsApp Fase 2), le pasamos los datos
+        if (typeof inyeccionesPorApp[app.baseId].encender === 'function') {
+          let contactosData = "[]";
+          if (app.baseId === 'wa') {
+            try {
+              // Importar localmente si no estÃ¡ global (por precauciÃ³n aunque nodeIntegration estÃ© activo)
+              const ipcRenderer = window.require('electron').ipcRenderer;
+
+              // Obtenemos proveedores y clientes para abarcar todo el directorio
+              const resProv = await ipcRenderer.invoke('obtener-proveedores');
+              let todosLosContactos = [];
+
+              if (resProv) {
+                const provLigeros = (Array.isArray(resProv) ? resProv : resProv.data || []).flatMap(p => {
+                  const nombreBase = p.nombreComercial || p.razonSocial || p.nombre;
+                  const dataAdicional = {
+                    tipo: 'Proveedor',
+                    deudaActual: p.metricas?.deudaActual || 0,
+                    diasVisita: p.diasVisita?.join(', ') || '',
+                    totalFacturas: p.metricas?.totalFacturas || 0,
+                    carpetaAsociada: nombreBase
+                  };
+                  const principal = { id: p.id, nombre: nombreBase, ...dataAdicional };
+                  const extras = (p.contactos || []).map(c => ({ id: p.id, nombre: c.nombre, ...dataAdicional }));
+                  return [principal, ...extras].filter(item => item.nombre && item.nombre.trim() !== "");
+                });
+                todosLosContactos = [...todosLosContactos, ...provLigeros];
+              }
+
+              // Intentamos obtener clientes (con try/catch en caso de que el canal aÃºn no exista)
+              try {
+                const resCli = await ipcRenderer.invoke('obtener-clientes');
+                if (resCli) {
+                  const cliLigeros = (Array.isArray(resCli) ? resCli : resCli.data || []).flatMap(p => {
+                    const nombreBase = p.nombreComercial || p.razonSocial || p.nombre;
+                    const dataAdicional = {
+                      tipo: 'Cliente',
+                      deudaActual: p.metricas?.deudaActual || 0,
+                      diasVisita: p.diasVisita?.join(', ') || '',
+                      totalFacturas: p.metricas?.totalFacturas || 0,
+                      carpetaAsociada: nombreBase
+                    };
+                    const principal = { id: p.id, nombre: nombreBase, ...dataAdicional };
+                    const extras = (p.contactos || []).map(c => ({ id: p.id, nombre: c.nombre, ...dataAdicional }));
+                    return [principal, ...extras].filter(item => item.nombre && item.nombre.trim() !== "");
+                  });
+                  todosLosContactos = [...todosLosContactos, ...cliLigeros];
+                }
+              } catch (e) {
+                console.log("No se pudo obtener clientes o el canal no existe aÃºn.", e);
+              }
+
+              contactosData = JSON.stringify(todosLosContactos);
+            } catch (err) {
+              console.error("Error leyendo directorio para inyección nativa", err);
+            }
+          }
+          scriptPayload = inyeccionesPorApp[app.baseId].encender(contactosData);
+        } else {
+          scriptPayload = inyeccionesPorApp[app.baseId].encender;
+        }
+
+        wv.executeJavaScript(scriptPayload)
+          .catch(err => console.error("Error inyectando Boost:", err));
+      } else if (inyeccionesPorApp[app.baseId] && !boostActivo) {
+        wv.executeJavaScript(inyeccionesPorApp[app.baseId].apagar)
+          .catch(err => console.error("Error apagando Boost:", err));
+      }
+    };
+
+    // Intentar aplicar cuando cambia el toggle, silenciando el error si aÃºn no carga
+    if (abierta) {
+      try { aplicarBoost(); } catch (e) { }
+    }
+
+    // TambiÃ©n reaplicar si recargamos o navegamos y esperamos al dom-ready
+    wv.addEventListener('dom-ready', aplicarBoost);
+
+    return () => {
+      wv.removeEventListener('dom-ready', aplicarBoost);
+    }
+  }, [boostActivo, abierta, app.baseId]);
 
   // --- CERRAR HISTORIAL AL CLICKEAR FUERA ---
   useEffect(() => {
@@ -195,6 +315,19 @@ const VentanaFlotante = ({ app, icono, abierta, encendida, silenciada, reloadTri
           )}
         </div>
         <div className="flex items-center gap-1">
+          {/* Botón de MODO BOOST (si tiene scripts disponibles) */}
+          {inyeccionesPorApp[app.baseId] && (
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); setBoostActivo(!boostActivo); }}
+              className={`p-1.5 rounded-lg transition-all border flex items-center gap-1.5 px-2.5 mr-2 cursor-pointer ${boostActivo ? 'bg-pink-500 text-white border-pink-500 shadow-md shadow-pink-500/20 hover:bg-pink-600' : 'bg-white dark:bg-slate-800 text-gray-400 border-gray-200 dark:border-slate-700 hover:text-pink-500 hover:border-pink-200'}`}
+              title={boostActivo ? "Apagar Modo Boost" : "Encender Modo Boost (Super Funciones)"}
+            >
+              <svg className={`w-4 h-4 ${boostActivo ? 'animate-bounce' : ''}`} fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.5a.75.75 0 01.743.648l.007.102v3.013a5.5 5.5 0 014.288 3.518l.847 2.222a1.751 1.751 0 00.785.83l.115.056c1.116.495 1.583 1.838.995 2.868l-.089.138A7.834 7.834 0 0113.5 19v2.75a.75.75 0 01-1.493.102L12 21.75V19a7.834 7.834 0 01-6.19-3.048 2.25 2.25 0 01.906-3.006l.115-.056a1.75 1.75 0 00.785-.83l.847-2.222a5.5 5.5 0 014.288-3.518V3.25A.75.75 0 0112 2.5z" /></svg>
+              <span className="text-xs font-black tracking-widest uppercase">{boostActivo ? 'BOOST ON' : 'BOOST'}</span>
+            </button>
+          )}
+
           <button onMouseDown={(e) => e.stopPropagation()} onClick={desacoplar} className="text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 p-1.5 rounded-lg transition-colors cursor-pointer" title="Desacoplar a ventana independiente (Multitarea)">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
           </button>
@@ -204,14 +337,67 @@ const VentanaFlotante = ({ app, icono, abierta, encendida, silenciada, reloadTri
         </div>
       </div>
 
-      <div className="flex-1 relative bg-[#f0f2f5] dark:bg-[#111b21]">
+      <div className="flex-1 relative bg-[#f0f2f5] dark:bg-[#111b21] flex flex-row overflow-hidden">
         {(isDragging || isResizing) && <div className="absolute inset-0 z-20"></div>}
-        <webview ref={webviewRef} src={app.url} partition={app.particion} allowpopups="true" webpreferences="contextIsolation=no" useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" className="absolute inset-0 w-full h-full border-none z-10"></webview>
+
+        {/* Panel del WebView Principal */}
+        <div className={`relative h-full transition-all duration-300 ${mostrarPOS && app.baseId === 'wa' ? 'w-[70%]' : 'w-full'}`}>
+          <webview ref={webviewRef} src={app.url} partition={app.particion} allowpopups="true" webpreferences="contextIsolation=no" useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" className="absolute inset-0 w-full h-full border-none z-10"></webview>
+        </div>
+
+        {/* Panel Lateral Nativo POS */}
+        {mostrarPOS && app.baseId === 'wa' && (
+          <div className="w-[30%] h-full bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 flex flex-col z-10 animate-fade-in shadow-l">
+            <PanelWhatsAppPOS
+              proveedor={posData}
+              onClose={() => setMostrarPOS(false)}
+              onInsertarPedido={(texto) => {
+                // Función para enviar el mensaje al webview y que éste lo pegue en el chat
+                if (webviewRef.current) {
+                  // Escapamos los saltos de línea y comillas para el executor de JS
+                  const textoSeguro = texto.replace(/\n/g, "\\n").replace(/"/g, '\\"');
+                  webviewRef.current.executeJavaScript(`
+                    (function() {
+                       const injectText = (target) => {
+                           // Simulamos un evento de "Pegar" (Ctrl+V) nativo del sistema
+                           // Esto asegura que WhatsApp intercepte el texto y preserve los \\n de forma natural.
+                           const dataTransfer = new DataTransfer();
+                           dataTransfer.setData('text/plain', "${textoSeguro}");
+                           const pasteEvent = new ClipboardEvent('paste', {
+                               clipboardData: dataTransfer,
+                               bubbles: true,
+                               cancelable: true
+                           });
+                           target.dispatchEvent(pasteEvent);
+                       };
+
+                       const el = document.activeElement;
+                       
+                       if (el && el.getAttribute('contenteditable') === 'true') {
+                          injectText(el);
+                       } else {
+                          // Fallback a buscar el cajón de entrada si se perdió el Focus
+                          const textbox = document.querySelector('div[contenteditable="true"][data-tab="10"]') || document.querySelector('div[contenteditable="true"][title="Escribe un mensaje"]');
+                          if (textbox) {
+                             textbox.focus();
+                             injectText(textbox);
+                          } else {
+                             alert("Por favor, haz click en la barra de mensajes de WhatsApp antes de insertar el pedido.");
+                          }
+                       }
+                    })();
+                  `);
+                }
+              }}
+            />
+          </div>
+        )}
+
         <div onMouseDown={iniciarRedimension} className="absolute bottom-0 right-0 w-8 h-8 cursor-se-resize z-30 flex items-end justify-end p-1.5 opacity-40 hover:opacity-100 transition-opacity">
           <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM14 22H12V20H14V22ZM18 18H16V16H18V18Z" /></svg>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

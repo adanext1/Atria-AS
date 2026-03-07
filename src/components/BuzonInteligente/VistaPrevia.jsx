@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const paletasDominio = [
   { id: 'blue', light: 'bg-blue-50/70', border: 'border-blue-200', text: 'text-blue-800', hover: 'hover:border-blue-400 hover:shadow-blue-500/10', iconBg: 'bg-blue-100 text-blue-600', darkBg: 'dark:bg-blue-900/10', darkBorder: 'dark:border-blue-800/40' },
@@ -17,15 +17,32 @@ const getColorPorRemitente = (email) => {
 };
 
 export default function VistaPrevia({ correoSeleccionado, setCorreoSeleccionado, detallesCorreo, esModoAcordeon = false, importarCorreoActual, importando }) {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    // Sincronizar el estado del iFrame con la clase 'dark' del documento raíz
+    const updateTheme = () => setIsDark(document.documentElement.classList.contains('dark'));
+    updateTheme(); // Init
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') updateTheme();
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
   if (!correoSeleccionado) return null;
 
   const colorP = getColorPorRemitente(correoSeleccionado.remitente);
 
   return (
-    <div onClick={(e) => e.stopPropagation()} className={`flex flex-col bg-white dark:bg-slate-800 overflow-hidden relative z-10 animate-fade-in transition-all ${esModoAcordeon ? 'rounded-xl border border-gray-100 dark:border-slate-700 mt-3 shadow-inner' : 'rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 h-full w-full'}`}>
+    <div onClick={(e) => e.stopPropagation()} className={`flex flex-col bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl overflow-y-auto custom-scrollbar relative z-10 animate-fade-in transition-all ${esModoAcordeon ? 'rounded-xl border border-white/40 dark:border-slate-700/50 mt-3 shadow-inner max-h-[85vh]' : 'rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/50 dark:border-slate-700/50 h-full w-full'}`}>
 
-      {/* HEADER DE VISTA PREVIA */}
-      <div className={`${colorP.light} ${colorP.darkBg} p-5 lg:p-6 border-b ${colorP.border} ${colorP.darkBorder} flex justify-between items-start shrink-0`}>
+      {/* HEADER DE VISTA PREVIA (GLASS) */}
+      <div className={`${colorP.light} ${colorP.darkBg} backdrop-blur-md p-5 lg:p-6 border-b border-white/50 dark:border-slate-700/50 flex justify-between items-start shrink-0`}>
         <div className="flex items-center gap-3 lg:gap-4">
           <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center font-black text-lg lg:text-xl shadow-inner shrink-0 ${colorP.iconBg}`}>
             {correoSeleccionado.empresa ? correoSeleccionado.empresa.charAt(0) : '@'}
@@ -43,25 +60,55 @@ export default function VistaPrevia({ correoSeleccionado, setCorreoSeleccionado,
       </div>
 
       {/* CUERPO DEL CORREO */}
-      <div className="p-4 lg:p-6 border-b border-gray-100 dark:border-slate-700 shrink-0">
-        {correoSeleccionado.mensajeHtml ? (
-          <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 overflow-auto max-h-96 border border-gray-200 dark:border-slate-700">
+      <div className="p-4 lg:p-6 border-b border-white/50 dark:border-slate-700/50 shrink-0">
+        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm rounded-xl p-2 lg:p-4 border border-white/60 dark:border-slate-700/50 shadow-inner flex flex-col h-[250px] lg:h-[350px]">
+          {correoSeleccionado.mensajeHtml ? (
             <iframe
-              srcDoc={correoSeleccionado.mensajeHtml}
+              srcDoc={`<style>
+                :root {
+                  --text-color: ${isDark ? '#e2e8f0' : '#1e293b'};
+                  --link-color: ${isDark ? '#60a5fa' : '#2563eb'};
+                  --scroll-thumb: ${isDark ? '#475569' : '#cbd5e1'};
+                  --scroll-hover: ${isDark ? '#64748b' : '#94a3b8'};
+                }
+                body { 
+                  font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+                  word-wrap: break-word !important; 
+                  overflow-wrap: break-word !important; 
+                  max-width: 100vw; 
+                  overflow-x: hidden; 
+                  color: var(--text-color) !important; 
+                  line-height: 1.6; 
+                  margin: 0; 
+                  padding: 20px; 
+                  background-color: transparent !important;
+                  font-size: 14px;
+                } 
+                p, div, span, td, th { word-wrap: break-word !important; overflow-wrap: break-word !important; background-color: transparent !important; color: inherit !important; font-family: inherit !important; }
+                a { color: var(--link-color) !important; text-decoration: none; }
+                a:hover { text-decoration: underline; }
+                img { max-width: 100%; height: auto; border-radius: 8px; } 
+                ::-webkit-scrollbar { width: 8px; height: 8px; }
+                ::-webkit-scrollbar-track { background: transparent; }
+                ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 4px; }
+                ::-webkit-scrollbar-thumb:hover { background: var(--scroll-hover); }
+              </style>${correoSeleccionado.mensajeHtml}`}
               sandbox="allow-same-origin"
-              className="w-full min-h-[300px] border-none bg-white"
+              className="w-full h-full flex-1 border-none bg-transparent"
               title="Visor Email HTML"
             />
-          </div>
-        ) : (
-          <p className="text-gray-700 dark:text-gray-300 text-xs lg:text-sm leading-relaxed whitespace-pre-wrap">{correoSeleccionado.mensaje}</p>
-        )}
+          ) : (
+            <div className="w-full h-full overflow-y-auto custom-scrollbar p-2">
+              <p className="text-gray-800 dark:text-gray-200 text-xs lg:text-sm leading-relaxed whitespace-pre-wrap break-words">{correoSeleccionado.mensaje}</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* DETECTOR DE XML O PDF INTELIGENTE */}
       {/* 1. FLUJO NORMAL: Si viene XML, mostramos los datos hermosos extraídos de él */}
       {detallesCorreo.xmlInfo ? (
-        <div className="mx-4 lg:mx-6 mt-4 lg:mt-6 p-3 lg:p-4 bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/50 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shrink-0 animate-fade-in-up">
+        <div className="mx-4 lg:mx-6 mt-4 lg:mt-6 p-3 lg:p-4 bg-purple-50/80 dark:bg-purple-900/20 backdrop-blur-md border border-purple-200/50 dark:border-purple-800/40 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shrink-0 animate-fade-in-up shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-lg"><svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div>
             <div>
@@ -87,7 +134,7 @@ export default function VistaPrevia({ correoSeleccionado, setCorreoSeleccionado,
       ) : (
         /* 2. FLUJO DE EXCEPCIÓN: ¡El PDF Huérfano! Si descargamos y vimos un archivo pero NO hay xmlInfo */
         correoSeleccionado.tienePdf && detallesCorreo.pdfData && (
-          <div className="mx-4 lg:mx-6 mt-4 lg:mt-6 p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/50 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0 animate-fade-in-up">
+          <div className="mx-4 lg:mx-6 mt-4 lg:mt-6 p-4 bg-orange-50/80 dark:bg-orange-900/20 backdrop-blur-md border border-orange-200/50 dark:border-orange-800/40 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0 animate-fade-in-up shadow-sm">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-lg shadow-sm font-bold text-lg">✏️</div>
               <div>
@@ -112,21 +159,28 @@ export default function VistaPrevia({ correoSeleccionado, setCorreoSeleccionado,
         <h4 className="text-[10px] lg:text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2">Previsualización PDF</h4>
 
         {detallesCorreo.cargando ? (
-          <div className="flex-1 bg-gray-50 dark:bg-[#1a1f2b] border border-gray-200 dark:border-slate-600 rounded-xl flex flex-col items-center justify-center animate-pulse">
-            <svg className="animate-spin w-8 h-8 text-blue-500 mb-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <p className="text-sm font-bold text-gray-500">Descargando archivos de forma segura...</p>
+          <div className="flex-1 bg-white/40 dark:bg-[#1a1f2b]/40 backdrop-blur-sm border border-white/50 dark:border-slate-600/50 rounded-2xl flex flex-col items-center justify-center animate-pulse shadow-inner min-h-[400px]">
+            <svg className="animate-spin w-8 h-8 text-cyan-500 mb-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">Descargando archivos de forma segura...</p>
           </div>
         ) : detallesCorreo.pdfData ? (
-          <div className="flex-1 bg-gray-100 dark:bg-[#1a1f2b] border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden relative group">
-            <iframe src={detallesCorreo.pdfData} className="w-full h-full border-none" title="Visor PDF" />
+          <div className="flex-1 w-full bg-white dark:bg-slate-900 border border-white/50 dark:border-slate-600/50 rounded-xl overflow-hidden shadow-inner min-h-[500px]">
+            {/* Usando object embed fuerza a Chrome/Edge a mostrar la UI nativa (zoom, print) completa */}
+            <object
+              data={detallesCorreo.pdfData}
+              type="application/pdf"
+              className="w-full h-full bg-white"
+            >
+              <iframe src={detallesCorreo.pdfData} className="w-full h-full border-none bg-white" title="Visor PDF Fallback" />
+            </object>
           </div>
         ) : correoSeleccionado.tienePdf || correoSeleccionado.tieneXml ? (
-          <div className="flex-1 bg-rose-50/50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/30 rounded-xl flex items-center justify-center">
-            <p className="text-xs text-rose-500">No se pudo cargar el PDF o no venía incluido.</p>
+          <div className="flex-1 bg-rose-50/50 dark:bg-rose-900/10 backdrop-blur-sm border border-rose-200/50 dark:border-rose-800/30 rounded-2xl flex items-center justify-center shadow-inner">
+            <p className="text-xs text-rose-500 font-bold">No se pudo cargar el PDF o no venía incluido.</p>
           </div>
         ) : (
-          <div className="flex-1 bg-gray-50 dark:bg-slate-900/30 border border-dashed border-gray-200 dark:border-slate-700 rounded-xl flex items-center justify-center">
-            <p className="text-xs lg:text-sm text-gray-400 italic">No hay documentos adjuntos en este correo.</p>
+          <div className="flex-1 bg-white/30 dark:bg-slate-900/20 backdrop-blur-sm border border-dashed border-white/60 dark:border-slate-700/50 rounded-2xl flex items-center justify-center shadow-inner">
+            <p className="text-xs lg:text-sm text-gray-400 font-medium">No hay documentos adjuntos en este correo.</p>
           </div>
         )}
       </div>

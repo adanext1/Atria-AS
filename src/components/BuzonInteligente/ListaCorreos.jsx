@@ -63,15 +63,15 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
     <div className={`flex flex-col h-full transition-all duration-500 ease-in-out ${correoSeleccionado ? 'w-full lg:w-5/12' : 'w-full max-w-5xl mx-auto'}`}>
 
       {/* BARRA DE BÚSQUEDA Y FILTROS RÁPIDOS */}
-      <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 mb-4 shrink-0 flex flex-col gap-3">
+      <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-3 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/50 dark:border-slate-700/50 mb-4 shrink-0 flex flex-col gap-3">
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-cyan-600 dark:text-cyan-400 font-bold"><svg className="w-5 h-5 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
           <input
             type="text"
             placeholder="Buscar por Empresa o Asunto..."
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
-            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium"
+            className="w-full bg-white/50 dark:bg-slate-900/50 border border-white/60 dark:border-slate-700/50 text-gray-800 dark:text-white rounded-xl pl-10 pr-4 py-2.5 focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none transition shadow-inner backdrop-blur-sm text-sm font-medium placeholder-gray-400 dark:placeholder-slate-500"
           />
         </div>
 
@@ -88,10 +88,10 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
       </div>
 
       {/* BARRA DE ACCIONES MASIVAS */}
-      <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 mb-4 flex justify-between items-center shrink-0">
-        <div className="flex items-center gap-2 lg:gap-3">
-          <input type="checkbox" checked={seleccionados.length === correosFiltrados.length && correosFiltrados.length > 0} onChange={seleccionarTodos} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer ml-1 lg:ml-2" />
-          <span className="text-xs lg:text-sm font-bold text-gray-500 dark:text-gray-400">Todo ({correosFiltrados.length})</span>
+      <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-3 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/50 dark:border-slate-700/50 mb-4 flex justify-between items-center shrink-0">
+        <div className="flex items-center gap-2 lg:gap-3 bg-white/40 dark:bg-slate-900/40 px-3 py-1.5 rounded-xl border border-white/50 dark:border-slate-600/50 shadow-inner">
+          <input type="checkbox" checked={seleccionados.length === correosFiltrados.length && correosFiltrados.length > 0} onChange={seleccionarTodos} className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer ml-1 lg:ml-2 shadow-sm" />
+          <span className="text-xs lg:text-sm font-bold text-gray-600 dark:text-gray-300">Todo ({correosFiltrados.length})</span>
         </div>
         <div className={`flex gap-2 transition-opacity duration-300 ${seleccionados.length > 0 ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
           <button
@@ -125,12 +125,14 @@ export default function ListaCorreos({ correosLista, correoSeleccionado, selecci
           const estaActivo = correoSeleccionado?.id === correo.id;
 
           return (
-            <div key={correo.id} className="flex flex-col">
+            <div key={correo.id} className="flex flex-col animate-fade-in-up">
               <div
                 onClick={() => seleccionarYDescargar(correo)}
-                className={`rounded-2xl p-4 border transition-all cursor-pointer flex items-start gap-3 lg:gap-4 group 
-                  ${estaActivo ? `${colorP.light} ${colorP.darkBg} ${colorP.border} ${colorP.darkBorder} shadow-md transform scale-[1.01] lg:scale-100` : `bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:shadow-sm ${colorP.hover}`}`}
+                className={`rounded-[1.25rem] p-4 border transition-all duration-300 cursor-pointer flex items-start gap-3 lg:gap-4 group relative overflow-hidden backdrop-blur-md
+                  ${estaActivo ? `${colorP.light} ${colorP.darkBg} ${colorP.border} ${colorP.darkBorder} shadow-lg transform scale-[1.01] lg:scale-100 z-10 ring-2 ring-white/50 dark:ring-slate-700/50` : `bg-white/40 dark:bg-slate-800/40 border-white/40 dark:border-slate-700/40 hover:bg-white/70 dark:hover:bg-slate-700/60 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] hover:-translate-y-0.5 ${colorP.hover}`}`}
               >
+                {/* Reflejo superior Glass */}
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/50 dark:via-white/10 to-transparent"></div>
                 <div className="pt-0.5 lg:pt-1">
                   <input type="checkbox" checked={seleccionados.includes(correo.id)} onChange={(e) => toggleSeleccion(correo.id, e)} onClick={e => e.stopPropagation()} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
                 </div>

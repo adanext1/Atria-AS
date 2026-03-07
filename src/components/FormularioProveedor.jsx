@@ -119,33 +119,49 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 font-sans max-w-5xl mx-auto">
+    <div className="min-h-screen p-4 md:p-8 font-sans max-w-[1800px] mx-auto relative overflow-hidden">
 
-      {/* HEADER */}
-      <header className="animate-fade-in-up flex justify-between items-center mb-6 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 relative z-20">
-        <button type="button" onClick={alVolver} className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 font-semibold transition">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-          Cancelar
-        </button>
-        <button type="button" onClick={toggleTema} className="p-2 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition">
-          {modoOscuro ? '☀️' : '🌙'}
-        </button>
-      </header>
-
-      {/* TÍTULO DINÁMICO */}
-      <div className="animate-fade-in-up delay-100 mb-8 relative z-10">
-        <h2 className="text-3xl font-bold text-gray-800 dark:text-white">
-          {esModoEdicion ? `Editar: ${formData.nombreComercial}` : 'Alta de Nuevo Proveedor'}
-        </h2>
-        <p className="text-gray-500 dark:text-slate-400 mt-1">
-          {esModoEdicion ? 'Añade contactos, bancos o cambia sus plazos de pago.' : 'Configura las reglas exactas para automatizar tus pagos.'}
-        </p>
+      {/* Elementos decorativos Glass (Orbes de fondo fijos) */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 fixed">
+        <div className="absolute top-10 right-10 w-80 h-80 bg-blue-400/20 dark:bg-blue-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-slow"></div>
+        <div className="absolute top-1/3 left-0 w-96 h-96 bg-purple-400/20 dark:bg-purple-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-reverse delay-1000"></div>
+        <div className="absolute bottom-20 right-1/4 w-[24rem] h-[24rem] bg-emerald-400/10 dark:bg-emerald-600/10 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-slow delay-2000"></div>
       </div>
 
-      <form onSubmit={guardarProveedor} className="space-y-6 animate-fade-in-up delay-100 relative z-0">
+      <div className="relative z-10 flex flex-col mb-8 animate-fade-in-up">
+        {/* Botón de regreso / Cancelar integrado */}
+        <div className="w-full flex justify-start mb-4">
+          <button
+            type="button"
+            onClick={alVolver}
+            className="group flex items-center gap-2 px-4 py-2.5 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-700/70 backdrop-blur-md rounded-2xl shadow-sm border border-white/50 dark:border-slate-600/40 transition-all hover:scale-105 hover:shadow-md text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+          >
+            <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
+            <span className="font-bold text-sm">Descartar Cambios</span>
+          </button>
+        </div>
+
+        {/* TÍTULO DINÁMICO */}
+        <div className="mt-2 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 border border-white/50 dark:border-slate-700/50 shadow-md flex gap-5 items-center">
+          <div className="w-14 h-14 rounded-2xl bg-blue-100/50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 shadow-sm border border-blue-200/50 dark:border-blue-500/30">
+            {esModoEdicion ? <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> : <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"></path></svg>}
+          </div>
+          <div>
+            <h2 className="text-4xl font-black text-gray-800 dark:text-white tracking-tight leading-tight">
+              {esModoEdicion ? `Edición de Perfil` : 'Alta de Nuevo Proveedor'}
+            </h2>
+            <p className="text-gray-500 dark:text-slate-400 mt-1.5 font-medium text-base">
+              {esModoEdicion ? `Modificando: ${formData.nombreComercial}` : 'Configura las reglas exactas para automatizar tus pagos y facturas.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={guardarProveedor} className="space-y-6 animate-fade-in-up delay-100 relative z-10 p-1">
 
         {/* IDENTIDAD */}
-        <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
+        <section className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-lg border border-white/50 dark:border-slate-700/50 transition-all duration-300 relative group overflow-hidden">
+          <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors duration-500 pointer-events-none"></div>
           <h3 className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-6 border-b border-gray-100 dark:border-slate-700 pb-3 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
             Identidad de la Empresa
@@ -204,7 +220,8 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
         </section>
 
         {/* LOGÍSTICA Y PAGOS */}
-        <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
+        <section className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-lg border border-white/50 dark:border-slate-700/50 transition-all duration-300 relative group overflow-hidden">
+          <div className="absolute inset-0 bg-purple-500/0 group-hover:bg-purple-500/5 transition-colors duration-500 pointer-events-none"></div>
           <h3 className="text-lg font-bold text-purple-600 dark:text-purple-400 mb-6 border-b border-gray-100 dark:border-slate-700 pb-3 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
             Reglas de Visita y Plazos de Pago
@@ -272,7 +289,8 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
         </section>
 
         {/* CORREOS Y COMUNICACIÓN AUTOMÁTICA */}
-        <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
+        <section className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm hover:shadow-lg border border-white/50 dark:border-slate-700/50 transition-all duration-300 relative group overflow-hidden">
+          <div className="absolute inset-0 bg-emerald-500/0 group-hover:bg-emerald-500/5 transition-colors duration-500 pointer-events-none"></div>
           <h3 className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mb-4 border-b border-gray-100 dark:border-slate-700 pb-3 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             Correos Electrónicos (Para envíos automáticos)
@@ -290,7 +308,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
         </section>
 
         {/* DIRECTORIO DE CONTACTOS */}
-        <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
+        <section className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm hover:shadow-lg border border-white/50 dark:border-slate-700/50 transition-all duration-300 max-h-screen overflow-y-auto">
           <div className="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">
             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -300,7 +318,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
           </div>
           <div className="space-y-4">
             {formData.contactos.map((contacto) => (
-              <div key={contacto.id} className="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-200 dark:border-slate-700 relative animate-fade-in flex flex-col md:flex-row gap-3">
+              <div key={contacto.id} className="bg-white/50 dark:bg-slate-900/40 p-4 rounded-xl border border-white/60 dark:border-slate-700/50 relative animate-fade-in flex flex-col md:flex-row gap-3 shadow-inner">
                 <select value={contacto.rol} onChange={(e) => actualizarContacto(contacto.id, 'rol', e.target.value)} className="bg-white dark:bg-[#1e2433] border border-gray-300 dark:border-slate-600 rounded-lg p-2 text-sm text-gray-900 dark:text-white outline-none w-full md:w-auto">
                   <option value="Vendedor / Ejecutivo">Ejecutivo de Ventas</option><option value="Cobrador">Cobrador</option><option value="Soporte">Soporte</option><option value="Otro">Otro</option>
                 </select>
@@ -323,14 +341,14 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
 
         {/* BANCOS Y NOTAS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md">
+          <section className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm hover:shadow-lg border border-white/50 dark:border-slate-700/50 transition-all duration-300 overflow-hidden">
             <div className="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">
               <h3 className="text-lg font-bold text-orange-600 dark:text-orange-400">Cuentas Bancarias</h3>
               <button type="button" onClick={agregarBanco} className="text-sm font-bold text-orange-600 bg-orange-50 dark:bg-orange-900/30 px-3 py-1.5 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 transition">+ Añadir Cuenta</button>
             </div>
             <div className="space-y-4">
               {formData.cuentasBancarias.map((cuenta) => (
-                <div key={cuenta.id} className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-xl border border-gray-200 dark:border-slate-700 relative">
+                <div key={cuenta.id} className="bg-white/50 dark:bg-slate-900/40 p-3 rounded-xl border border-white/60 dark:border-slate-700/50 relative shadow-inner">
                   <input type="text" placeholder="Banco (Ej. Banamex)" value={cuenta.banco} onChange={(e) => actualizarBanco(cuenta.id, 'banco', e.target.value)} className="w-full mb-2 bg-white dark:bg-[#1e2433] border border-gray-300 dark:border-slate-600 rounded-lg p-2 text-sm text-gray-900 dark:text-white outline-none" />
                   <div className="flex gap-2">
                     <input type="text" placeholder="No. Cuenta" value={cuenta.cuenta} onChange={(e) => actualizarBanco(cuenta.id, 'cuenta', e.target.value)} className="flex-1 bg-white dark:bg-[#1e2433] border border-gray-300 dark:border-slate-600 rounded-lg p-2 text-sm text-gray-900 dark:text-white outline-none" />
@@ -341,7 +359,7 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
             </div>
           </section>
 
-          <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col transition-all hover:shadow-md">
+          <section className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm hover:shadow-lg border border-white/50 dark:border-slate-700/50 flex flex-col transition-all duration-300">
             <h3 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Notas Generales</h3>
             <textarea name="notasGenerales" value={formData.notasGenerales} onChange={handleChange} placeholder="Ej. No reciben pagos después de las 4 PM..." className="w-full flex-1 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-600 rounded-xl p-3 text-sm text-gray-900 dark:text-white outline-none resize-none min-h-[120px] focus:border-blue-500"></textarea>
           </section>
@@ -350,8 +368,8 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
         <div className="h-40 w-full shrink-0"></div>
       </form>
 
-      {/* BOTÓN INFERIOR */}
-      <div className="fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-gray-200 dark:border-slate-700 p-4 flex justify-center md:justify-end gap-4 z-50">
+      {/* BOTÓN INFERIOR GLASSMORPHISM */}
+      <div className="fixed bottom-0 left-0 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-t border-white/50 dark:border-slate-700/50 p-4 flex justify-center md:justify-end gap-4 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
         <button type="button" onClick={alVolver} className="px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition">Cancelar</button>
         <button type="button" onClick={guardarProveedor} disabled={guardando} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-10 rounded-xl shadow-lg shadow-blue-500/30 transition transform hover:-translate-y-0.5 flex items-center gap-2">
           {guardando ? (
@@ -360,10 +378,10 @@ export default function FormularioProveedor({ alVolver, modoOscuro, toggleTema, 
         </button>
       </div>
 
-      {/* MODAL DE ÉXITO */}
+      {/* MODAL DE ÉXITO GLASSMORPHISM */}
       {mostrarModalExito && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-[#1e2433] rounded-[32px] p-8 max-w-sm w-full shadow-2xl border border-gray-100 dark:border-slate-700/50 relative transform transition-all flex flex-col items-center text-center animate-bounce-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-2xl rounded-[32px] p-8 max-w-sm w-full shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-white/50 dark:border-slate-700/50 relative transform transition-all flex flex-col items-center text-center animate-bounce-in">
             <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center mb-6 shadow-inner animate-[pulse_2s_ease-in-out_infinite]">
               <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
             </div>

@@ -649,5 +649,135 @@ module.exports = {
         return { success: false, error: error.message };
       }
     });
+
+    ipcMain.handle('obtener-todas-facturas-completas', async (event) => {
+      try {
+        const config = store.get('userConfig');
+        if (!config || !config.rutaDestino) return [];
+
+        const rutaProveedores = path.join(config.rutaDestino, 'Proveedores');
+        if (!(await fsExtra.pathExists(rutaProveedores))) return [];
+
+        const proveedoresDir = await fsExtra.readdir(rutaProveedores);
+        let todasLasFacturas = [];
+
+        for (const provDir of proveedoresDir) {
+          const rutaProv = path.join(rutaProveedores, provDir);
+          const stat = await fsExtra.stat(rutaProv);
+          if (!stat.isDirectory()) continue;
+
+          let nombreProveedorReal = provDir;
+          const rutaPerfil = path.join(rutaProv, 'perfil.json');
+          if (await fsExtra.pathExists(rutaPerfil)) {
+            const perfil = await fsExtra.readJson(rutaPerfil);
+            nombreProveedorReal = perfil.nombre || provDir;
+          }
+
+          const rutaFacturas = path.join(rutaProv, 'registro_facturas.json');
+          const rutaProductos = path.join(rutaProv, 'registro_productos.json');
+
+          let facturasProv = [];
+          if (await fsExtra.pathExists(rutaFacturas)) facturasProv = await fsExtra.readJson(rutaFacturas);
+          let productosProv = {};
+          if (await fsExtra.pathExists(rutaProductos)) productosProv = await fsExtra.readJson(rutaProductos);
+
+          for (const fac of facturasProv) {
+            fac.proveedor = nombreProveedorReal;
+            fac.carpetaDestino = provDir;
+
+            // Deducir ruta del XML base con búsqueda inteligente en el directorio físico
+            if (fac.fecha) {
+              const partes = fac.fecha.split('-');
+              if (partes.length === 3) {
+                const dirArchivos = path.join(rutaProv, partes[0], partes[1], partes[2]);
+                if (await fsExtra.pathExists(dirArchivos)) {
+                  const archivos = await fsExtra.readdir(dirArchivos);
+
+                  // Extraemos el folio limpio, ignorando letras de Serie si existen (S005-009 -> 009)
+                  const folioSeguro = (fac.folio || 'S_F').replace(/[<>:"/\\|?*]+/g, '_');
+                  const fragmentoFolio = folioSeguro.includes('-') ? folioSeguro.split('-').pop() : folioSeguro;
+
+                  // Buscamos cualquier XML que contenga el número de folio
+                  let archivoDeseado = archivos.find(a => a.toLowerCase().endsWith('.xml') && a.includes(fragmentoFolio));
+
+                  // Si no encuentra por fragmento, intenta buscar por el Factura ID (UUID) temporal si es que lo tiene el JSON
+                  if (!archivoDeseado) {
+                    archivoDeseado = archivos.find(a => a.toLowerCase().endsWith('.xml') && a.includes(fac.id));
+                  }
+
+                  if (archivoDeseado) {
+                    fac.rutaXmlProbable = path.join(dirArchivos, archivoDeseado);
+                  }
+                }
+              }
+            }
+
+            fac.productosAsociados = [];
+            for (const [nombreProd, datosProd] of Object.entries(productosProv)) {
+              if (datosProd.historial) {
+                const compraEnEstaFactura = datosProd.historial.find(h => h.folio === fac.folio);
+                if (compraEnEstaFactura) {
+                  fac.productosAsociados.push({
+                    nombre: nombreProd,
+                    cantidad: compraEnEstaFactura.cantidad,
+                    precioUnitario: compraEnEstaFactura.precio,
+                    impuestos: compraEnEstaFactura.impuestosPagados || [],
+                    claveSAT: datosProd.claveSAT || '',
+                    claveUnidad: datosProd.claveUnidad || ''
+                  });
+                }
+              }
+            }
+            todasLasFacturas.push(fac);
+          }
+        }
+        todasLasFacturas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        return todasLasFacturas;
+
+      } catch (error) {
+        console.error("Error al obtener facturas globales:", error);
+        return [];
+      }
+    });
+
+    ipcMain.handle('leer-xml-factura', async (event, rutaXml) => {
+      try {
+        if (!rutaXml || !(await fsExtra.pathExists(rutaXml))) {
+          return { success: false, error: 'Archivo XML no encontrado físicamente.' };
+        }
+
+        const contenidoXml = await fsExtra.readFile(rutaXml, 'utf-8');
+        const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
+        const xmlParseado = await parser.parseStringPromise(contenidoXml);
+
+        const comprobante = xmlParseado['cfdi:Comprobante'] || {};
+        const receptor = comprobante['cfdi:Receptor'] || {};
+        const impuestos = comprobante['cfdi:Impuestos'] || {};
+
+        let uuid = 'No encontrado';
+        if (comprobante['cfdi:Complemento'] && comprobante['cfdi:Complemento']['tfd:TimbreFiscalDigital']) {
+          uuid = comprobante['cfdi:Complemento']['tfd:TimbreFiscalDigital'].UUID || uuid;
+        }
+
+        return {
+          success: true,
+          datosFiscales: {
+            uuid: uuid,
+            usoCFDI: receptor.UsoCFDI || 'G03',
+            metodoPago: comprobante.MetodoPago || 'PUE',
+            formaPago: comprobante.FormaPago || '99',
+            tipoDeComprobante: comprobante.TipoDeComprobante || 'I',
+            moneda: comprobante.Moneda || 'MXN',
+            subTotal: comprobante.SubTotal || '0.00',
+            descuento: comprobante.Descuento || '0.00',
+            total: comprobante.Total || '0.00',
+            totalImpuestosTrasladados: impuestos.TotalImpuestosTrasladados || '0.00',
+            totalImpuestosRetenidos: impuestos.TotalImpuestosRetenidos || '0.00'
+          }
+        };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    });
   }
 };

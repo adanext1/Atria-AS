@@ -280,33 +280,44 @@ export default function BuzonInteligente({ alVolver, modoOscuro, toggleTema }) {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#0f141e] font-sans overflow-hidden">
-      <header className="bg-white dark:bg-slate-800 px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center shadow-sm shrink-0">
-        <div className="flex items-center gap-4">
-          <button onClick={alVolver} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl text-gray-500 transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+    <div className="h-screen flex flex-col font-sans overflow-hidden relative bg-transparent pt-16 md:pt-[4.5rem]">
+      {/* BACKGROUND ORBES GLASS (Separado del contenido principal) */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 bg-gray-50 dark:bg-[#0f141e]">
+        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-indigo-400/20 dark:bg-indigo-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-slow"></div>
+        <div className="absolute bottom-1/4 left-1/4 w-[35rem] h-[35rem] bg-purple-400/20 dark:bg-purple-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-reverse delay-1000"></div>
+      </div>
+
+      {/* HEADER LOCAL ULTRA-COMPACTO (Solo Herramientas) */}
+      <header className="px-4 py-2 flex justify-between items-center shrink-0 z-20 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border-b border-white/50 dark:border-slate-700/50 shadow-sm transition-all">
+        <div className="flex items-center gap-3">
+          {/* BOTÓN REGRESAR */}
+          <button
+            onClick={alVolver}
+            className="p-1.5 hover:bg-white/40 dark:hover:bg-slate-700/50 rounded-lg transition-colors group border border-transparent hover:border-white/50 dark:hover:border-slate-600/50"
+            title="Regresar"
+          >
+            <svg className="w-5 h-5 text-gray-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
-          <div>
-            <h1 className="text-xl font-black text-gray-800 dark:text-white flex items-center gap-2">
-              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">Buzón Inteligente</span>
-            </h1>
-            <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mt-0.5">Gestor de Documentos ERP</p>
+
+          <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76"></path></svg>
           </div>
+          <h1 className="text-sm font-bold text-gray-800 dark:text-gray-200">
+            Buzón Inteligente
+          </h1>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* BOTÓN FORZAR RECARGA (TRUE) */}
-          <button onClick={() => escanearBandeja(pestanaActiva, true)} disabled={escaneando || !imapConfig.user} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 px-5 py-2.5 rounded-xl font-bold text-sm transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none">
-            {escaneando ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>}
+        <div className="flex items-center gap-2">
+          <button onClick={() => escanearBandeja(pestanaActiva, true)} disabled={escaneando || !imapConfig.user} className="flex items-center gap-1.5 bg-blue-600/90 hover:bg-blue-600 text-white shadow-sm px-3 py-1.5 rounded-lg font-bold text-xs transition-all disabled:opacity-50">
+            {escaneando ? <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>}
             {escaneando ? 'Sincronizando...' : 'Actualizar Correos'}
-          </button>
-          <button onClick={toggleTema} className="p-2.5 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition">
-            {modoOscuro ? '☀️' : '🌙'}
           </button>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden h-full">
+      <div className="flex flex-1 overflow-hidden h-full z-10 relative mt-0">
         <SidebarCarpetas
           pestanaActiva={pestanaActiva}
           setPestanaActiva={setPestanaActiva}
@@ -314,9 +325,12 @@ export default function BuzonInteligente({ alVolver, modoOscuro, toggleTema }) {
           correosLista={correosLista}
           carpetasNube={carpetasNube}
           abrirModalEnlazar={(carpeta) => { setCarpetaParaEnlazar(carpeta); setModalEnlazarAbierto(true); }}
+          escanearBandeja={() => escanearBandeja(pestanaActiva, true)}
+          escaneando={escaneando}
+          haConfigurado={imapConfig.user ? true : false}
         />
 
-        <main className="flex-1 flex overflow-hidden p-3 lg:p-4 gap-4 bg-gray-50/50 dark:bg-[#0f141e]">
+        <main className="flex-1 flex overflow-hidden p-3 lg:p-4 gap-4 bg-transparent rounded-tl-[2rem] border-l border-t border-white/40 dark:border-slate-700/30">
           {pestanaActiva !== 'configuracion' && (
             <>
               <ListaCorreos
@@ -368,116 +382,120 @@ export default function BuzonInteligente({ alVolver, modoOscuro, toggleTema }) {
       {/* =========================================================
           NUEVO MODAL DE ÉXITO HERMOSO (Reemplaza al alert de Windows)
           ========================================================= */}
-      {modalExito.abierto && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col items-center text-center p-8 border border-emerald-100 dark:border-emerald-900/30">
-            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mb-5 shadow-inner">
-              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+      {
+        modalExito.abierto && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md animate-fade-in p-4">
+            <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col items-center text-center p-8 border border-white/50 dark:border-emerald-900/30">
+              <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mb-5 shadow-inner">
+                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+              </div>
+              <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-2">¡Importación Exitosa!</h2>
+              <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-8 leading-relaxed">
+                Se guardaron <span className="font-black text-emerald-600 dark:text-emerald-400 text-lg mx-1">{modalExito.cantidad}</span> facturas correctamente en tu base de datos y directorio de proveedores.
+              </p>
+              <button
+                onClick={() => setModalExito({ abierto: false, cantidad: 0 })}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/30 transition-all transform hover:-translate-y-0.5"
+              >
+                Aceptar y Continuar
+              </button>
             </div>
-            <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-2">¡Importación Exitosa!</h2>
-            <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-8 leading-relaxed">
-              Se guardaron <span className="font-black text-emerald-600 dark:text-emerald-400 text-lg mx-1">{modalExito.cantidad}</span> facturas correctamente en tu base de datos y directorio de proveedores.
-            </p>
-            <button
-              onClick={() => setModalExito({ abierto: false, cantidad: 0 })}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/30 transition-all transform hover:-translate-y-0.5"
-            >
-              Aceptar y Continuar
-            </button>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* =========================================================
-          MODAL: RELLENAR DATOS DE PDF HUÉRFANO (NUEVO)
+          MODAL: RELLENAR DATOS DE PDF HUÉRFANO (GLASS)
           ========================================================= */}
-      {pdfVacioAEditar && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in-up">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-slate-700 relative">
-            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Completar Datos del PDF</h3>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">
-              Este correo solo contiene un PDF sin XML. Llena los datos para registrar el gasto en el sistema.
-            </p>
+      {
+        pdfVacioAEditar && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in-up">
+            <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-[2.5rem] p-6 md:p-8 max-w-md w-full shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-white/50 dark:border-slate-700/50 relative">
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Completar Datos del PDF</h3>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">
+                Este correo solo contiene un PDF sin XML. Llena los datos para registrar el gasto en el sistema.
+              </p>
 
-            <form onSubmit={guardarCapturaPDFManual} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Proveedor / Remitente</label>
-                <input
-                  type="text"
-                  name="proveedor"
-                  required
-                  defaultValue={pdfVacioAEditar.empresa || pdfVacioAEditar.remitente}
-                  className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={guardarCapturaPDFManual} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">RFC (Opcional)</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Proveedor / Remitente</label>
                   <input
                     type="text"
-                    name="rfc"
-                    placeholder="XAXX010101000"
-                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition uppercase"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Folio Factura</label>
-                  <input
-                    type="text"
-                    name="folio"
+                    name="proveedor"
                     required
-                    placeholder="Ej: F-10293"
+                    defaultValue={pdfVacioAEditar.empresa || pdfVacioAEditar.remitente}
                     className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Monto Total ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="total"
-                    required
-                    placeholder="0.00"
-                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">RFC (Opcional)</label>
+                    <input
+                      type="text"
+                      name="rfc"
+                      placeholder="XAXX010101000"
+                      className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition uppercase"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Folio Factura</label>
+                    <input
+                      type="text"
+                      name="folio"
+                      required
+                      placeholder="Ej: F-10293"
+                      className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Fecha</label>
-                  <input
-                    type="date"
-                    name="fecha"
-                    required
-                    defaultValue={new Date().toISOString().split('T')[0]} // Fecha de hoy
-                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  />
-                </div>
-              </div>
 
-              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100 dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setPdfVacioAEditar(null)}
-                  disabled={importando}
-                  className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={importando}
-                  className={`px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition transform ${importando ? 'bg-orange-400 cursor-wait' : 'bg-orange-600 hover:bg-orange-700 hover:-translate-y-0.5'}`}
-                >
-                  {importando ? 'Guardando...' : 'Guardar Datos Ocultos'}
-                </button>
-              </div>
-            </form>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Monto Total ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="total"
+                      required
+                      placeholder="0.00"
+                      className="w-full bg-white/50 dark:bg-slate-900/50 border border-white/60 dark:border-slate-700/50 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition shadow-inner backdrop-blur-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Fecha</label>
+                    <input
+                      type="date"
+                      name="fecha"
+                      required
+                      defaultValue={new Date().toISOString().split('T')[0]} // Fecha de hoy
+                      className="w-full bg-white/50 dark:bg-slate-900/50 border border-white/60 dark:border-slate-700/50 text-gray-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition shadow-inner backdrop-blur-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-white/60 dark:border-slate-700/50">
+                  <button
+                    type="button"
+                    onClick={() => setPdfVacioAEditar(null)}
+                    disabled={importando}
+                    className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/50 rounded-xl transition backdrop-blur-md"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={importando}
+                    className={`px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition transform ${importando ? 'bg-orange-400 cursor-wait' : 'bg-orange-600 hover:bg-orange-700 hover:-translate-y-0.5'}`}
+                  >
+                    {importando ? 'Guardando...' : 'Guardar Datos Ocultos'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
     </div>
   );

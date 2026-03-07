@@ -219,6 +219,64 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
   const datosGrafica = generarDatosGrafica();
 
   // =========================================================
+  // FUNCIÓN: CÁLCULO DE VENCIMIENTO MOTORIZADO (FASE 6)
+  // =========================================================
+  const obtenerInfoVencimiento = (fac) => {
+    if (fac.estado === 'Pagada' || fac.estado === 'Esperando REP') {
+      return { label: fac.estado, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30', anim: '' };
+    }
+
+    const fechaHoy = new Date();
+    fechaHoy.setHours(0, 0, 0, 0);
+    const fechaFactura = new Date(fac.fecha);
+    const tipoPago = proveedor.tipoPago || 'contado';
+
+    let fechaVencimiento = new Date(fechaFactura);
+
+    if (tipoPago === 'neto') {
+      const diasCredito = parseInt(proveedor.diasCreditoNeto) || 0;
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + diasCredito);
+    } else if (tipoPago === 'ciclico') {
+      const diasSemanaMapa = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
+      const diaObjetivo = diasSemanaMapa[proveedor.diaPagoFijo] || 1;
+      const semanasFrecuencia = parseInt(proveedor.frecuenciaSemanas) || 1;
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + ((diaObjetivo + 7 - fechaVencimiento.getDay()) % 7));
+      if (fechaVencimiento.getTime() <= fechaFactura.getTime()) {
+        fechaVencimiento.setDate(fechaVencimiento.getDate() + (semanasFrecuencia * 7));
+      }
+    } else if (tipoPago === 'variable') {
+      return { label: 'Acumulando', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30', anim: '' };
+    }
+    // Si es contado, la fechaVencimiento sigue siendo la fechaFactura
+
+    const diffTiempo = fechaVencimiento.getTime() - fechaHoy.getTime();
+    const diasRestantes = Math.ceil(diffTiempo / (1000 * 3600 * 24));
+
+    // ESCALA DE COLORES GRANULAR
+    if (diasRestantes < 0) {
+      const atraso = Math.abs(diasRestantes);
+      if (atraso > 3) {
+        return { label: `Vencida (-${atraso}d)`, color: 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.5)]', anim: 'animate-pulse' };
+      }
+      return { label: `Vencida (-${atraso}d)`, color: 'bg-red-100 text-red-700 dark:bg-red-900/40', anim: '' };
+    }
+
+    if (diasRestantes === 0) {
+      return { label: 'Vence HOY', color: 'bg-orange-500 text-white shadow-lg shadow-orange-500/30', anim: 'animate-bounce' };
+    }
+
+    if (diasRestantes <= 3) {
+      return { label: `Vence en ${diasRestantes}d`, color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 border border-yellow-400/50', anim: '' };
+    }
+
+    if (diasRestantes <= 7) {
+      return { label: `Vence en ${diasRestantes}d`, color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40', anim: '' };
+    }
+
+    return { label: `Vence en ${diasRestantes}d`, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30', anim: '' };
+  };
+
+  // =========================================================
   // DIBUJADOR DE BOTONES PARA LA TABLA (OJITO O SIGNO +)
   // =========================================================
   const renderBotonDoc = (fac, tipo) => {
@@ -262,88 +320,128 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 font-sans max-w-7xl mx-auto pb-20">
+    <div className="min-h-screen p-4 md:p-8 font-sans max-w-[1800px] mx-auto pb-20 relative overflow-hidden">
 
-      {/* HEADER TIPO TARJETA */}
-      <header className="animate-fade-in-up bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 mb-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 dark:bg-blue-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-        <div className="flex justify-between items-start relative z-10 mb-6">
-          <button onClick={alVolver} className="flex items-center gap-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 font-semibold transition bg-gray-50 dark:bg-slate-900/50 px-4 py-2 rounded-xl">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+      {/* Fondo de Orbs Animados (Atria Premium Style) - Mejorado para 1800px */}
+      <div className="absolute inset-0 pointer-events-none z-0 fixed">
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-500/20 dark:bg-blue-600/10 rounded-full blur-[140px] animate-float-slow"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-500/20 dark:bg-purple-600/10 rounded-full blur-[140px] animate-float-reverse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40%] h-[40%] bg-indigo-500/10 dark:bg-indigo-600/5 rounded-full blur-[120px] animate-pulse"></div>
+      </div>
+
+      {/* HEADER TIPO TARJETA GLASSMORPHISM PREMIUM */}
+      <header className="animate-fade-in-up bg-white/60 dark:bg-slate-800/40 backdrop-blur-2xl p-8 md:p-10 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/60 dark:border-slate-700/50 mb-10 relative overflow-hidden group">
+
+        {/* Glow interno dinámico */}
+        <div className="absolute top-0 right-0 w-[50rem] h-[50rem] bg-blue-500/5 dark:bg-blue-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none transition-all group-hover:scale-110 duration-1000"></div>
+
+        <div className="flex justify-between items-start relative z-10 mb-10">
+          <button onClick={alVolver} className="group flex items-center gap-2.5 px-5 py-3 bg-white/50 dark:bg-slate-800/60 hover:bg-white/90 dark:hover:bg-slate-700/90 backdrop-blur-md rounded-2xl shadow-sm border border-white/60 dark:border-slate-600/50 transition-all hover:scale-105 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-sm">
+            <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
             Volver al Directorio
           </button>
-          <div className="flex items-center gap-2">
-            <button onClick={sincronizarLocal} disabled={sincronizando} className="p-2.5 rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/30 transition disabled:opacity-50">
-              <svg className={`w-5 h-5 ${sincronizando ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-            </button>
-            <button onClick={toggleTema} className="p-2.5 rounded-xl bg-gray-50 dark:bg-slate-900/50 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition">
-              {modoOscuro ? '☀️' : '🌙'}
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={sincronizarLocal}
+              disabled={sincronizando}
+              title="Sincronizar Bóveda"
+              className="group p-3 rounded-2xl bg-white/50 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-700 text-purple-600 dark:text-purple-400 backdrop-blur-md shadow-sm border border-white/60 dark:border-slate-600/50 transition-all hover:scale-110 active:scale-95 disabled:opacity-50"
+            >
+              <svg className={`w-5 h-5 ${sincronizando ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
-          <div className="w-24 h-24 bg-white dark:bg-[#0f141e] rounded-2xl border-2 border-gray-100 dark:border-slate-700 shadow-sm flex items-center justify-center p-2 overflow-hidden">
-            {proveedor.logo ? <img src={proveedor.logo} alt="Logo" className="max-w-full max-h-full object-contain" /> : <span className="text-3xl font-black text-gray-400 dark:text-slate-600">{proveedor.nombre.charAt(0)}</span>}
-          </div>
-          <div className="text-center md:text-left flex-1">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white leading-tight">{proveedor.nombre}</h1>
-            <p className="text-gray-500 dark:text-slate-400 font-medium mb-3">RFC: {proveedor.rfc || 'No registrado'} • Regla: {proveedor.tipoPago?.toUpperCase() || 'CONTADO'}</p>
-            <div className="flex flex-wrap justify-center md:justify-start gap-2">
-              <span className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${deudaLocal > 0 ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-900/30' : 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/30'}`}>
-                {deudaLocal > 0 ? `🔴 Tiene Deuda Pendiente` : '🟢 Cuenta al Día'}
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-10 relative z-10">
+          <div className="w-32 h-32 bg-white/90 dark:bg-[#0f141e]/90 backdrop-blur-xl rounded-[2.5rem] border-2 border-white/60 dark:border-slate-600/60 shadow-2xl flex items-center justify-center p-4 overflow-hidden transform transition-all hover:scale-110 hover:rotate-3">
+            {proveedor.logo ?
+              <img src={proveedor.logo} alt="Logo" className="max-w-full max-h-full object-contain filter drop-shadow-md" /> :
+              <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-500 to-indigo-700 dark:from-blue-400 dark:to-cyan-500">
+                {proveedor.nombre.charAt(0)}
               </span>
+            }
+          </div>
+          <div className="text-center md:text-left flex-1 mt-2">
+            <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+              <h1 className="text-5xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">{proveedor.nombre}</h1>
+              <div className="flex items-center justify-center md:justify-start gap-2">
+                <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border shadow-sm transition-all duration-500 ${deudaLocal > 0 ? 'bg-red-500 text-white border-red-400 shadow-red-500/20' : 'bg-emerald-500 text-white border-emerald-400 shadow-emerald-500/20'}`}>
+                  {deudaLocal > 0 ? `DEUDA ACTIVA` : 'SIN DEUDA'}
+                </span>
+                <span className="bg-blue-600 text-white px-3 py-1 text-[10px] font-black uppercase rounded-lg tracking-widest shadow-lg shadow-blue-500/20">
+                  {proveedor.tipoPago || 'CONTADO'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-center md:justify-start items-center gap-4 text-sm font-bold text-gray-500 dark:text-slate-400">
+              <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-4 py-2 rounded-xl border border-black/5 dark:border-white/5 transition-colors hover:bg-black/10 dark:hover:bg-white/10">
+                <span className="opacity-60">RFC:</span>
+                <span className="text-gray-800 dark:text-gray-200 font-mono tracking-wider">{proveedor.rfc || 'XENX010101000'}</span>
+              </div>
+              <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-4 py-2 rounded-xl border border-black/5 dark:border-white/5 transition-colors hover:bg-black/10 dark:hover:bg-white/10">
+                <span className="opacity-60">ID Bóveda:</span>
+                <span className="text-gray-800 dark:text-gray-200">{nombreCarpeta}</span>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
       {/* GRID PRINCIPAL */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
         <div className="lg:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up delay-100">
-            <div className={`bg-white dark:bg-slate-800 p-5 rounded-3xl border shadow-sm relative overflow-hidden transition-colors ${deudaLocal > 0 ? 'border-red-200 dark:border-red-900/50' : 'border-gray-100 dark:border-slate-700'}`}>
-              <div className={`absolute top-0 left-0 w-1 h-full transition-colors ${deudaLocal > 0 ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></div>
-              <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 mb-1">Deuda Actual</p>
-              <h3 className={`text-3xl font-bold transition-colors ${deudaLocal > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatearDinero(deudaLocal)}</h3>
+            {/* Tarjeta Deuda */}
+            <div className={`bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 rounded-3xl border shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 ${deudaLocal > 0 ? 'border-red-200 dark:border-red-900/50 hover:shadow-red-500/10' : 'border-white/50 dark:border-slate-700/50'}`}>
+              <div className={`absolute top-0 left-0 w-1.5 h-full transition-colors ${deudaLocal > 0 ? 'bg-gradient-to-b from-red-400 to-red-600 animate-pulse' : 'bg-gradient-to-b from-emerald-400 to-emerald-600'}`}></div>
+              <p className="text-sm font-bold text-gray-500 dark:text-slate-400 mb-1 tracking-wide uppercase">Deuda Actual</p>
+              <h3 className={`text-3xl font-black transition-colors tracking-tight ${deudaLocal > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatearDinero(deudaLocal)}</h3>
             </div>
-            <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
+            {/* Tarjeta Crédito */}
+            <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 rounded-3xl border border-white/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-all duration-300 hover:-translate-y-1 hover:shadow-blue-500/10">
               <div className="flex justify-between items-end mb-1">
-                <p className="text-sm font-semibold text-gray-500 dark:text-slate-400">Crédito Libre</p>
-                {limiteCredito > 0 ? (<span className="text-xs font-bold text-blue-500">{Math.round(100 - porcentajeCredito)}%</span>) : (<span className="text-xs font-bold text-emerald-500">Ilimitado</span>)}
+                <p className="text-sm font-bold text-gray-500 dark:text-slate-400 tracking-wide uppercase">Crédito Libre</p>
+                {limiteCredito > 0 ? (<span className="text-xs font-black text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md">{Math.round(100 - porcentajeCredito)}%</span>) : (<span className="text-xs font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md">Ilimitado</span>)}
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">{limiteCredito > 0 ? formatearDinero(creditoDisponible) : '---'}</h3>
-              <div className="w-full bg-gray-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-1000 ${porcentajeCredito > 85 ? 'bg-red-500' : porcentajeCredito > 60 ? 'bg-orange-400' : 'bg-blue-500'}`} style={{ width: `${limiteCredito > 0 ? porcentajeCredito : 100}%` }}></div>
+              <h3 className="text-3xl font-black text-gray-800 dark:text-white mb-4 tracking-tight">{limiteCredito > 0 ? formatearDinero(creditoDisponible) : '---'}</h3>
+              <div className="w-full bg-white/50 dark:bg-slate-900/50 border border-gray-200/50 dark:border-slate-700 h-2.5 rounded-full overflow-hidden shadow-inner">
+                <div className={`h-full rounded-full transition-all duration-1000 ${porcentajeCredito > 85 ? 'bg-gradient-to-r from-red-500 to-red-600' : porcentajeCredito > 60 ? 'bg-gradient-to-r from-orange-400 to-orange-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`} style={{ width: `${limiteCredito > 0 ? porcentajeCredito : 100}%` }}></div>
               </div>
             </div>
-            <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-              <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 mb-1">Compras Históricas</p>
-              <h3 className="text-2xl font-bold text-gray-800 dark:text-white">{formatearDinero(comprasTotales)}</h3>
+            {/* Tarjeta Histórico */}
+            <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 rounded-3xl border border-white/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-indigo-500/10">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-blue-500 to-indigo-600"></div>
+              <p className="text-sm font-bold text-gray-500 dark:text-slate-400 mb-1 tracking-wide uppercase">Compras Históricas</p>
+              <h3 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">{formatearDinero(comprasTotales)}</h3>
             </div>
           </div>
 
           {/* Gráfica */}
-          <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm animate-fade-in-up delay-200">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Tendencia de Compras</h3>
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 md:p-8 rounded-[2rem] border border-white/50 dark:border-slate-700/50 shadow-sm animate-fade-in-up delay-200">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-6">
+              <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+              Tendencia de Compras
+            </h3>
             {datosGrafica.length > 0 ? (
-              <div className="h-48 flex items-end gap-2 md:gap-4 border-b border-gray-200 dark:border-slate-700 pb-2">
+              <div className="h-48 flex items-end gap-2 md:gap-4 border-b border-gray-200/50 dark:border-slate-700/50 pb-2 relative">
+                <div className="absolute inset-0 bg-gradient-to-t from-blue-500/5 to-transparent rounded-lg pointer-events-none"></div>
                 {datosGrafica.map((dato, index) => (
-                  <div key={index} className="relative flex-1 flex flex-col items-center group h-full justify-end">
-                    <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-xs py-1.5 px-2.5 rounded-lg whitespace-nowrap z-10 font-bold shadow-lg">{formatearDinero(dato.monto)}</div>
-                    <div className="w-full max-w-[40px] bg-gradient-to-t from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/50 group-hover:from-blue-400 group-hover:to-blue-500 rounded-t-lg transition-all duration-[1000ms] relative" style={{ height: animarGrafica ? `${dato.porcentajeAlto}%` : '0%' }}>
-                      <div className="absolute top-0 w-full h-1.5 bg-blue-500 rounded-t-lg"></div>
+                  <div key={index} className="relative flex-1 flex flex-col items-center group h-full justify-end z-10">
+                    <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-800/90 backdrop-blur-md text-gray-800 dark:text-white border border-gray-200 dark:border-slate-600 text-xs py-1.5 px-2.5 rounded-lg whitespace-nowrap z-20 font-bold shadow-xl">{formatearDinero(dato.monto)}</div>
+                    <div className="w-full max-w-[48px] bg-gradient-to-t from-blue-400/80 to-indigo-500/80 hover:from-blue-500 hover:to-indigo-600 rounded-t-xl transition-all duration-[1000ms] shadow-inner relative overflow-hidden" style={{ height: animarGrafica ? `${dato.porcentajeAlto}%` : '0%' }}>
+                      <div className="absolute top-0 w-full h-1.5 bg-white/40"></div>
                     </div>
-                    <span className="text-xs font-semibold text-gray-500 dark:text-slate-400 mt-2">{dato.mes}</span>
+                    <span className="text-xs font-bold text-gray-500 dark:text-slate-400 mt-2 bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-white/50 dark:border-slate-700/50">{dato.mes}</span>
                   </div>
                 ))}
               </div>
-            ) : <p className="text-gray-400 text-sm text-center py-8">No hay datos para la gráfica.</p>}
+            ) : <div className="h-48 flex items-center justify-center bg-gray-50/50 dark:bg-slate-900/30 rounded-2xl border border-dashed border-gray-200 dark:border-slate-700"><p className="text-gray-400 font-medium">No hay datos suficientes para graficar.</p></div>}
           </div>
 
           {/* TABLAS DE FACTURAS */}
-          <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm animate-fade-in-up delay-200">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 md:p-8 rounded-[2rem] border border-white/50 dark:border-slate-700/50 shadow-sm animate-fade-in-up delay-200">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -357,20 +455,20 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                 </div>
                 <input
                   type="text"
-                  placeholder="Buscar factura por folio o fecha..."
+                  placeholder="Buscar factura o fecha..."
                   value={busquedaFactura}
                   onChange={(e) => setBusquedaFactura(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-[#1a1f2b] text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-gray-800 dark:text-white transition-all"
+                  className="w-full pl-10 pr-4 py-2 border border-white/60 dark:border-slate-600/50 rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-gray-800 dark:text-white transition-all shadow-inner"
                 />
               </div>
             </div>
 
             {/* TABLA PENDIENTES */}
             <div className="mb-8">
-              <h4 className="text-md font-bold text-red-600 dark:text-red-400 mb-3 border-b border-red-100 dark:border-red-900/30 pb-2">Pendientes de Pago</h4>
-              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+              <h4 className="text-md font-bold text-red-600 dark:text-red-400 mb-3 border-b border-red-200/50 dark:border-red-900/30 pb-2">Pendientes de Pago</h4>
+              <div className="overflow-x-auto max-h-96 overflow-y-auto rounded-xl border border-gray-100/50 dark:border-slate-700/50 bg-white/30 dark:bg-slate-900/20">
                 <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                  <thead className="sticky top-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md z-10 shadow-sm">
                     <tr className="border-b border-gray-100 dark:border-slate-700 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                       <th className="pb-3 pl-2 pt-2">Folio</th>
                       <th className="pb-3 pt-2">Fecha</th>
@@ -391,7 +489,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                           .filter(f => f.estado !== 'Pagada')
                           .filter(f => (f.folio || '').toLowerCase().includes(busquedaFactura.toLowerCase()) || (f.fecha || '').includes(busquedaFactura))
                           .map((fac, idx) => (
-                            <tr key={idx} className="border-b border-gray-50 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-900/50 transition">
+                            <tr key={idx} className="border-b border-gray-200/30 dark:border-slate-700/30 hover:bg-white/50 dark:hover:bg-slate-800/50 transition">
                               <td className="py-4 pl-2 font-mono font-medium text-gray-800 dark:text-gray-200 truncate max-w-[100px]" title={fac.folio}>{fac.folio}</td>
                               <td className="py-4 text-gray-600 dark:text-slate-400 whitespace-nowrap">{fac.fecha}</td>
                               <td className="py-4 text-right font-bold text-gray-800 dark:text-white whitespace-nowrap">
@@ -408,9 +506,15 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                               <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'REP')}</div></td>
                               <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'NC')}</div></td>
                               <td className="py-4 pl-4 align-middle">
-                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap ${fac.estado === 'Esperando REP' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30' : 'bg-red-100 text-red-700 dark:bg-red-900/30'}`}>
-                                  {fac.estado}
-                                </span>
+                                {(() => {
+                                  const info = obtenerInfoVencimiento(fac);
+                                  return (
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase whitespace-nowrap transition-all duration-500 flex items-center justify-center gap-1.5 ${info.color} ${info.anim}`}>
+                                      {info.anim && <span className="w-1.5 h-1.5 rounded-full bg-current animate-ping"></span>}
+                                      {info.label}
+                                    </span>
+                                  );
+                                })()}
                               </td>
                             </tr>
                           ))
@@ -423,10 +527,10 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
 
             {/* TABLA PAGADAS */}
             <div>
-              <h4 className="text-md font-bold text-emerald-600 dark:text-emerald-400 mb-3 border-b border-emerald-100 dark:border-emerald-900/30 pb-2">Pagadas y Completadas</h4>
-              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+              <h4 className="text-md font-bold text-emerald-600 dark:text-emerald-400 mb-3 border-b border-emerald-200/50 dark:border-emerald-900/30 pb-2">Pagadas y Completadas</h4>
+              <div className="overflow-x-auto max-h-96 overflow-y-auto rounded-xl border border-gray-100/50 dark:border-slate-700/50 bg-white/30 dark:bg-slate-900/20">
                 <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                  <thead className="sticky top-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md z-10 shadow-sm">
                     <tr className="border-b border-gray-100 dark:border-slate-700 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                       <th className="pb-3 pl-2 pt-2">Folio</th>
                       <th className="pb-3 pt-2">Fecha</th>
@@ -447,7 +551,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                           .filter(f => f.estado === 'Pagada')
                           .filter(f => (f.folio || '').toLowerCase().includes(busquedaFactura.toLowerCase()) || (f.fecha || '').includes(busquedaFactura))
                           .map((fac, idx) => (
-                            <tr key={idx} className="border-b border-gray-50 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-900/50 transition">
+                            <tr key={idx} className="border-b border-gray-200/30 dark:border-slate-700/30 hover:bg-white/50 dark:hover:bg-slate-800/50 transition opacity-80 mix-blend-luminosity">
                               <td className="py-4 pl-2 font-mono font-medium text-gray-800 dark:text-gray-200 truncate max-w-[100px]" title={fac.folio}>{fac.folio}</td>
                               <td className="py-4 text-gray-600 dark:text-slate-400 whitespace-nowrap">{fac.fecha}</td>
                               <td className="py-4 text-right font-bold text-gray-800 dark:text-white whitespace-nowrap">
@@ -464,8 +568,8 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                               <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'REP')}</div></td>
                               <td className="py-4 align-middle"><div className="flex justify-center">{renderBotonDoc(fac, 'NC')}</div></td>
                               <td className="py-4 pl-4 align-middle">
-                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30`}>
-                                  {fac.estado}
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800/40`}>
+                                  Completada
                                 </span>
                               </td>
                             </tr>
@@ -481,7 +585,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
           {/* ========================================================= */}
           {/* NUEVA SECCIÓN: CATÁLOGO Y TENDENCIA DE PRECIOS            */}
           {/* ========================================================= */}
-          <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm animate-fade-in-up delay-300">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 md:p-8 rounded-[2rem] border border-white/50 dark:border-slate-700/50 shadow-sm animate-fade-in-up delay-300">
 
             {/* CABECERA CON BUSCADOR */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -500,14 +604,14 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                   placeholder="Buscar producto..."
                   value={busquedaProducto}
                   onChange={(e) => setBusquedaProducto(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-[#1a1f2b] text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-gray-800 dark:text-white transition-all"
+                  className="w-full pl-10 pr-4 py-2 border border-white/60 dark:border-slate-600/50 rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-gray-800 dark:text-white transition-all shadow-inner"
                 />
               </div>
             </div>
 
-            <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            <div className="overflow-x-auto max-h-96 overflow-y-auto rounded-xl border border-gray-100/50 dark:border-slate-700/50 bg-white/30 dark:bg-slate-900/20">
               <table className="w-full text-left border-collapse">
-                <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                <thead className="sticky top-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md z-10 shadow-sm">
                   <tr className="border-b border-gray-100 dark:border-slate-700 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                     <th className="pb-3 pl-2 pt-2">Descripción (Concepto)</th>
                     <th className="pb-3 text-right pt-2">Último Precio</th>
@@ -532,7 +636,7 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
                         }
 
                         return (
-                          <tr key={idx} className="border-b border-gray-50 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-900/50 transition">
+                          <tr key={idx} className="border-b border-gray-200/30 dark:border-slate-700/30 hover:bg-white/50 dark:hover:bg-slate-800/50 transition">
                             <td className="py-4 pl-2 font-medium text-gray-800 dark:text-gray-200">{nombreArticulo}</td>
                             <td className="py-4 text-right font-black text-gray-800 dark:text-white">{formatearDinero(datos.precioActual)}</td>
                             <td className="py-4 text-center align-middle">
@@ -566,15 +670,16 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
 
         {/* COLUMNA DERECHA */}
         <div className="space-y-6 animate-fade-in-up delay-300">
-          <div className="bg-gradient-to-br from-blue-600 to-purple-700 p-6 rounded-3xl shadow-lg text-white">
-            <h3 className="text-lg font-bold mb-4">Acciones Rápidas</h3>
-            <button onClick={() => setModalPagoAbierto(true)} className="w-full bg-white text-blue-600 hover:bg-gray-50 font-bold py-3 px-4 rounded-xl flex justify-center items-center gap-2 transition shadow-md transform hover:-translate-y-0.5">
+          <div className="bg-gradient-to-br from-blue-600/90 to-purple-700/90 backdrop-blur-xl p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(59,130,246,0.3)] border border-white/20 text-white relative overflow-hidden group hover:scale-[1.02] transition-transform">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2 group-hover:scale-150 transition-transform duration-700"></div>
+            <h3 className="text-lg font-black mb-4 relative z-10 flex items-center gap-2 tracking-wide"><svg className="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Acciones Rápidas</h3>
+            <button onClick={() => setModalPagoAbierto(true)} className="w-full bg-white/95 text-blue-700 hover:bg-white font-black py-4 px-4 rounded-xl flex justify-center items-center gap-2 transition shadow-lg relative z-10">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
               Saldar Facturas (Pago)
             </button>
           </div>
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
-            <h3 className="text-sm font-bold mb-4 uppercase">Directorio</h3>
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 rounded-[2rem] border border-white/50 dark:border-slate-700/50 shadow-sm relative overflow-hidden">
+            <h3 className="text-sm font-black mb-4 uppercase tracking-widest text-gray-500 dark:text-slate-400">Directorio</h3>
             {contactos.length > 0 ? (
               <div className="space-y-4">
                 {contactos.map(contacto => (
@@ -593,18 +698,18 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
       </div>
 
       {/* BITÁCORA */}
-      <div className="mt-8 animate-fade-in-up delay-500">
+      <div className="mt-8 animate-fade-in-up delay-500 relative z-10">
         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
           Historial de Actividad
         </h3>
-        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden max-h-64 overflow-y-auto p-4">
+        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-[2rem] border border-white/50 dark:border-slate-700/50 shadow-sm overflow-hidden max-h-64 overflow-y-auto p-4 relative">
           {bitacora.length === 0 ? <p className="text-center text-gray-400 italic py-4">No hay actividad registrada.</p> : (
             <ul className="space-y-3">
               {bitacora.map((ev, idx) => (
-                <li key={idx} className="flex items-start gap-3 text-sm border-b border-gray-50 dark:border-slate-700/50 pb-3 last:border-0 last:pb-0">
-                  <span className="text-xl mt-0.5">{ev.icono}</span>
-                  <div className="flex-1">
+                <li key={idx} className="flex items-start gap-3 text-sm border-b border-gray-200/50 dark:border-slate-700/30 pb-3 last:border-0 last:pb-0 hover:bg-white/30 dark:hover:bg-slate-900/20 p-2 rounded-xl transition">
+                  <span className="text-xl mt-0.5 bg-white shadow-sm dark:bg-slate-800 p-1.5 rounded-lg border border-gray-100 dark:border-slate-700">{ev.icono}</span>
+                  <div className="flex-1 mt-1">
                     <p className="font-medium text-gray-800 dark:text-gray-200">{ev.descripcion}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{ev.fechaHora} • <span className="font-semibold uppercase">{ev.tipo}</span></p>
                   </div>
@@ -619,9 +724,13 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
       {/* 1. MODAL DE PAGOS PRINCIPAL                                 */}
       {/* ========================================================= */}
       {modalPagoAbierto && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-[#1e2433] rounded-3xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-700/50 transform animate-fade-in-up">
-            <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-700/50 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/30">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-[2rem] w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl border border-white/50 dark:border-slate-700/50 transform animate-fade-in-up overflow-hidden relative">
+
+            {/* Orbe decorativo dentro del modal */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+            <div className="px-6 py-5 border-b border-gray-200/50 dark:border-slate-700/50 flex justify-between items-center bg-white/40 dark:bg-slate-800/40 relative z-10">
               <h2 className="text-xl font-black text-gray-800 dark:text-white flex items-center gap-2">Registrar Nuevo Pago</h2>
               <button onClick={() => setModalPagoAbierto(false)} className="text-gray-400 hover:text-red-500"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
             </div>
@@ -693,9 +802,9 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
               </div>
             </div>
 
-            <div className="px-6 py-5 border-t border-gray-100 dark:border-slate-700/50 bg-white flex justify-between items-center z-20">
-              <div><p className="text-xs text-gray-500 font-bold uppercase mb-0.5">Total a Pagar</p><p className="text-3xl font-black text-blue-600">{formatearDinero(totalSeleccionado)}</p></div>
-              <button onClick={procesarPago} disabled={facturasSeleccionadas.length === 0 || procesandoPago} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-8 rounded-xl disabled:opacity-50">{procesandoPago ? 'Guardando...' : 'Confirmar y Saldar'}</button>
+            <div className="px-6 py-5 border-t border-gray-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md flex justify-between items-center z-20">
+              <div><p className="text-xs text-gray-500 dark:text-slate-400 font-bold uppercase mb-0.5 tracking-wider">Total a Pagar</p><p className="text-3xl font-black text-blue-600 dark:text-blue-400 drop-shadow-sm">{formatearDinero(totalSeleccionado)}</p></div>
+              <button onClick={procesarPago} disabled={facturasSeleccionadas.length === 0 || procesandoPago} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 px-8 rounded-2xl disabled:opacity-50 transition-all shadow-lg hover:shadow-blue-500/25 transform hover:-translate-y-0.5">{procesandoPago ? 'Guardando...' : 'Confirmar y Saldar'}</button>
             </div>
           </div>
         </div>
@@ -705,10 +814,12 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
       {/* 2. NUEVO MODAL MULTIPROPÓSITO (ADJUNTAR / NOTA DE CRÉDITO) */}
       {/* ========================================================= */}
       {modalAdjuntoAbierto && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-[#1e2433] rounded-3xl w-full max-w-md shadow-2xl border border-slate-700/50 overflow-hidden transform animate-fade-in-up">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-[2rem] w-full max-w-md shadow-2xl border border-white/50 dark:border-slate-700/50 overflow-hidden transform animate-fade-in-up relative">
 
-            <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-700/50 flex justify-between items-center bg-gray-50/50">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+            <div className="px-6 py-5 border-b border-gray-200/50 dark:border-slate-700/50 flex justify-between items-center bg-white/40 dark:bg-slate-800/40 relative z-10">
               <h2 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2">
                 {datosAdjunto.tipoDoc === 'NC' ? 'Registrar Nota de Crédito' : `Adjuntar Documento (${datosAdjunto.tipoDoc})`}
               </h2>
@@ -716,35 +827,39 @@ export default function DetalleProveedor({ alVolver, modoOscuro, toggleTema, pro
             </div>
 
             <div className="p-6 space-y-5">
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800/30">
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase mb-1">Factura Seleccionada</p>
-                <p className="font-mono text-gray-800 dark:text-gray-200">{datosAdjunto.folio}</p>
+              <div className="bg-blue-50/50 dark:bg-blue-900/20 backdrop-blur-md p-4 rounded-2xl border border-blue-100/50 dark:border-blue-800/30 shadow-inner">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mb-1.5">Factura Seleccionada</p>
+                <p className="font-mono text-gray-800 dark:text-gray-200 text-lg">{datosAdjunto.folio}</p>
               </div>
 
               {datosAdjunto.tipoDoc === 'NC' && (
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Monto de la Nota de Crédito ($)</label>
-                  <input type="number" step="0.01" value={datosAdjunto.montoNC} onChange={(e) => setDatosAdjunto({ ...datosAdjunto, montoNC: e.target.value })} placeholder="Ej. 1500.00" className="w-full bg-white dark:bg-[#1a1f2b] border border-gray-200 dark:border-slate-600 rounded-xl p-3.5 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-blue-500" />
-                  <p className="text-xs text-gray-400 mt-2">Este monto se restará de la deuda automáticamente.</p>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5 uppercase tracking-wide">Monto de la Nota de Crédito ($)</label>
+                  <input type="number" step="0.01" value={datosAdjunto.montoNC} onChange={(e) => setDatosAdjunto({ ...datosAdjunto, montoNC: e.target.value })} placeholder="Ej. 1500.00" className="w-full bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-white/60 dark:border-slate-600/50 rounded-xl p-3.5 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-blue-500 shadow-inner transition-all" />
+                  <p className="text-xs text-blue-500 dark:text-blue-400 mt-2 font-medium flex items-center gap-1"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Este monto se restará de la deuda automáticamente.</p>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-                  Archivo a adjuntar (PDF/Imagen) {datosAdjunto.tipoDoc !== 'NC' && <span className="text-red-500">*</span>}
+                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5 flex items-center gap-1 uppercase tracking-wide">
+                  Archivo a adjuntar (PDF/Imagen) {datosAdjunto.tipoDoc !== 'NC' && <span className="text-red-500 font-bold">*</span>}
                 </label>
-                <div className="relative w-full h-32 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-2xl flex flex-col items-center justify-center bg-gray-50/50 hover:bg-blue-50 cursor-pointer overflow-hidden group">
+                <div className="relative w-full h-32 border-2 border-dashed border-gray-300 dark:border-slate-500/50 rounded-2xl flex flex-col items-center justify-center bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-700/50 cursor-pointer overflow-hidden group transition-all backdrop-blur-sm">
                   <input type="file" accept=".pdf,image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if (e.target.files[0]) setDatosAdjunto({ ...datosAdjunto, archivo: e.target.files[0], nombreArchivo: e.target.files[0].name }); }} />
                   {datosAdjunto.nombreArchivo ? (
-                    <div className="flex flex-col items-center text-emerald-600 font-bold"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg><span className="text-sm px-4 truncate max-w-[250px] mt-1">{datosAdjunto.nombreArchivo}</span></div>
-                  ) : <span className="text-sm font-medium text-gray-400">Seleccionar o arrastrar archivo</span>}
+                    <div className="flex flex-col items-center text-emerald-600 dark:text-emerald-400 font-bold group-hover:scale-110 transition-transform">
+                      <svg className="w-8 h-8 drop-shadow-sm mb-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
+                      <span className="text-sm px-4 truncate max-w-[250px]">{datosAdjunto.nombreArchivo}</span>
+                    </div>
+                  ) : <span className="text-sm font-medium text-gray-500 dark:text-slate-400 group-hover:text-blue-500 transition-colors flex flex-col items-center gap-2"><svg className="w-8 h-8 opacity-50 block mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>Clickea o arrastra aquí tu PDF o captura</span>}
                 </div>
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-100 dark:border-slate-700/50 bg-gray-50/50 flex justify-end">
-              <button onClick={guardarAdjunto} disabled={procesandoAdjunto || (datosAdjunto.tipoDoc !== 'NC' && !datosAdjunto.archivo)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg disabled:opacity-50">
-                {procesandoAdjunto ? 'Guardando...' : 'Guardar y Aplicar'}
+            <div className="px-6 py-5 border-t border-gray-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md flex justify-end gap-3 rounded-b-[2rem] relative z-20">
+              <button onClick={() => setModalAdjuntoAbierto(false)} className="px-5 py-2.5 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors">Cancelar</button>
+              <button onClick={guardarAdjunto} disabled={procesandoAdjunto || (datosAdjunto.tipoDoc !== 'NC' && !datosAdjunto.archivo) || (datosAdjunto.tipoDoc === 'NC' && !datosAdjunto.montoNC)} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl disabled:opacity-50 transition-all shadow-md hover:shadow-blue-500/25">
+                {procesandoAdjunto ? 'Guardando...' : 'Guardar Documento'}
               </button>
             </div>
           </div>

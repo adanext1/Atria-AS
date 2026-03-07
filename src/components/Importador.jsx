@@ -232,113 +232,129 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 font-sans max-w-5xl mx-auto pb-36">
-      <header className="animate-fade-in-up flex justify-between items-center mb-6 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
-        <button onClick={alVolver} className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-semibold transition">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-          Volver al Dashboard
-        </button>
-        <button onClick={toggleTema} className="p-2 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition text-sm">
-          {modoOscuro ? '☀️' : '🌙'}
-        </button>
-      </header>
+    <div className="min-h-screen p-4 md:p-8 font-sans max-w-[1800px] mx-auto pb-36 relative overflow-x-hidden">
 
-      <div className="animate-fade-in-up delay-100 mb-6">
-        <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Centro de Importación</h2>
-        <p className="text-gray-500 dark:text-slate-400 mt-1">Arrastra tus facturas (XML y PDF). El sistema detectará si son compras o ventas automáticamente.</p>
+      {/* Elementos decorativos de fondo (Glassmorphism orbs copiados del Dashboard y ajustados) */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 fixed">
+        <div className="absolute top-10 right-10 w-72 h-72 bg-blue-400/20 dark:bg-blue-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-slow"></div>
+        <div className="absolute top-1/2 left-20 w-80 h-80 bg-indigo-400/20 dark:bg-indigo-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-reverse delay-1000"></div>
+        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-purple-400/20 dark:bg-purple-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-60 animate-float-slow delay-2000"></div>
+      </div>
+
+      <div className="animate-fade-in-up delay-100 mb-8 relative z-10 flex flex-col items-center">
+        {/* Botón de regreso integrado tipo floating icon */}
+        <div className="w-full flex justify-start mb-2">
+          <button
+            onClick={alVolver}
+            className="group flex items-center gap-2 px-4 py-2.5 bg-white/50 dark:bg-slate-800/40 hover:bg-white/80 dark:hover:bg-slate-700/70 backdrop-blur-md rounded-2xl shadow-sm border border-white/50 dark:border-slate-600/40 transition-all hover:scale-105 hover:shadow-md text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+          >
+            <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
+            <span className="font-bold text-sm">Volver</span>
+          </button>
+        </div>
+
+        <div className="inline-flex items-center justify-center p-3 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl mb-4 shadow-sm border border-blue-100/50 dark:border-blue-500/20 mt-2">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+        </div>
+        <h2 className="text-4xl font-black text-gray-800 dark:text-white tracking-tight">Centro de Importación</h2>
+        <p className="text-gray-500 dark:text-slate-400 mt-3 text-lg max-w-2xl mx-auto text-center">Arrastra tus facturas (XML y PDF). El sistema detectará automáticamente si son compras o ventas, extrayendo todos los impuestos y conceptos.</p>
       </div>
 
       <section
         {...getRootProps()}
-        className={`animate-fade-in-up delay-100 relative overflow-hidden border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 shadow-sm mb-8
-          ${isDragActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]' : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-500'}`}
+        className={`animate-fade-in-up relative z-10 delay-100 overflow-hidden border-2 border-dashed rounded-[2.5rem] p-12 flex flex-col items-center justify-center cursor-pointer transition-all duration-500 shadow-lg mb-8 backdrop-blur-xl group
+          ${isDragActive ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-900/40 scale-[1.02] shadow-blue-500/20' : 'border-blue-200 dark:border-slate-600 bg-white/60 dark:bg-slate-800/60 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-2xl hover:bg-white/80 dark:hover:bg-slate-800/80'}`}
       >
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-white/5 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+
         <input {...getInputProps()} />
-        <div className={`mb-4 p-4 rounded-full transition-transform duration-500 ${isDragActive ? 'bg-blue-100 dark:bg-blue-800/50 scale-110' : 'bg-gray-50 dark:bg-slate-700'}`}>
-          <svg className={`w-10 h-10 transition-colors ${isDragActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+        <div className={`mb-6 p-5 rounded-2xl transition-all duration-500 shadow-md border ${isDragActive ? 'bg-blue-600 border-blue-500 scale-110 shadow-blue-500/30' : 'bg-white dark:bg-slate-700 border-gray-100 dark:border-slate-600 group-hover:scale-110 group-hover:bg-blue-50 dark:group-hover:bg-slate-600'}`}>
+          <svg className={`w-12 h-12 transition-colors ${isDragActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
         </div>
-        <h3 className={`text-xl font-bold mb-1 transition-colors ${isDragActive ? 'text-blue-700 dark:text-blue-400' : 'text-gray-800 dark:text-white'}`}>
-          {isDragActive ? '¡Suelta los archivos aquí!' : 'Sube tus comprobantes'}
+        <h3 className={`text-2xl font-bold mb-2 transition-colors ${isDragActive ? 'text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400'}`}>
+          {isDragActive ? '¡Suelta los comprobantes aquí!' : 'Sube tus archivos XML y PDF'}
         </h3>
-        <p className="text-gray-500 dark:text-slate-400 text-sm text-center">Puedes arrastrar decenas de XML y PDF al mismo tiempo.</p>
+        <p className="text-gray-500 dark:text-slate-400 text-base text-center font-medium">Puedes arrastrar carpetas enteras o decenas de archivos a la vez.</p>
       </section>
 
-      <section className="animate-fade-in-up delay-200">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+      <section className="animate-fade-in-up delay-200 relative z-10">
+        <div className="flex justify-between items-center mb-6 bg-white/50 dark:bg-slate-800/40 backdrop-blur-md p-4 rounded-2xl border border-white/40 dark:border-slate-700/50 shadow-sm">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
             Sala de Espera
-            <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 text-xs px-2 py-0.5 rounded-full">{archivosEnEspera.length}</span>
+            <span className="bg-blue-500 text-white text-sm font-bold px-3 py-1 rounded-full shadow-sm shadow-blue-500/30">{archivosEnEspera.length}</span>
           </h3>
           {archivosEnEspera.length > 0 && (
-            <button onClick={() => setArchivosEnEspera([])} className="text-sm font-semibold text-gray-500 hover:text-red-500 transition">
+            <button onClick={() => setArchivosEnEspera([])} className="text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition bg-white/60 dark:bg-slate-800/60 px-4 py-2 rounded-xl border border-gray-100 dark:border-slate-700 hover:border-red-200 shadow-sm">
               Limpiar Lista
             </button>
           )}
         </div>
 
         {archivosEnEspera.length === 0 ? (
-          <div className="text-center py-10 border border-dashed border-gray-200 dark:border-slate-700 rounded-3xl">
-            <p className="text-gray-400 dark:text-slate-500 font-medium">No hay archivos en espera. Arrastra algunos arriba para comenzar.</p>
+          <div className="text-center py-16 border border-dashed border-gray-300 dark:border-slate-600 rounded-[2rem] bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm">
+            <div className="bg-gray-100 dark:bg-slate-700 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            </div>
+            <p className="text-gray-500 dark:text-slate-400 font-medium text-lg">No hay archivos en espera.<br /> Arrastra tus comprobantes arriba para comenzar.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {archivosEnEspera.map((archivo) => (
-              <div key={archivo.id} className={`bg-white dark:bg-slate-800 rounded-2xl border ${archivo.estado === 'duplicado' ? 'border-gray-300 dark:border-slate-600 opacity-80' : 'border-gray-100 dark:border-slate-700'} shadow-sm overflow-hidden transition-all group`}>
+              <div key={archivo.id} className={`bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-[1.5rem] border ${archivo.estado === 'duplicado' ? 'border-gray-300/50 dark:border-slate-600/50 opacity-70' : 'border-white/60 dark:border-slate-700/50'} shadow-lg hover:shadow-xl transition-all group overflow-hidden`}>
 
                 {/* ÁREA CLICKABLE (TU DISEÑO ORIGINAL MEJORADO) */}
                 <div
-                  className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 relative hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+                  className="p-5 flex flex-col md:flex-row items-start md:items-center gap-5 relative hover:bg-white/90 dark:hover:bg-slate-700/80 transition-colors"
                 >
                   {/* Barra de color lateral de estado */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${archivo.estado === 'listo' ? 'bg-emerald-500' : archivo.estado === 'duplicado' ? 'bg-gray-400' : archivo.estado === 'advertencia' ? 'bg-orange-400' : 'bg-red-500'}`}></div>
+                  <div className={`absolute left-0 top-0 bottom-0 w-2 ${archivo.estado === 'listo' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : archivo.estado === 'duplicado' ? 'bg-gray-400' : archivo.estado === 'advertencia' ? 'bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'}`}></div>
 
                   {/* Badges de XML/PDF originales */}
-                  <div className="flex flex-col gap-2 pl-2">
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold text-center border ${archivo.xmlListo ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-400' : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-slate-700 dark:border-slate-600'}`}>
-                      {archivo.xmlListo ? '✅ XML' : '❌ XML'}
+                  <div className="flex flex-col gap-2 pl-3">
+                    <span className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-wider text-center border shadow-sm ${archivo.xmlListo ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-500/20 dark:border-blue-500/30 dark:text-blue-300' : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-slate-800/80 dark:border-slate-700/80 dark:text-slate-500'}`}>
+                      {archivo.xmlListo ? '✓ XML' : '✕ XML'}
                     </span>
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold text-center border ${archivo.pdfListo ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/40 dark:border-red-800 dark:text-red-400' : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-slate-700 dark:border-slate-600'}`}>
-                      {archivo.pdfListo ? '✅ PDF' : '❌ PDF'}
+                    <span className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-wider text-center border shadow-sm ${archivo.pdfListo ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-500/20 dark:border-red-500/30 dark:text-red-300' : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-slate-800/80 dark:border-slate-700/80 dark:text-slate-500'}`}>
+                      {archivo.pdfListo ? '✓ PDF' : '✕ PDF'}
                     </span>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-3 mb-2">
                       {/* ETIQUETA NUEVA: Compra vs Venta */}
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${archivo.tipoOperacion === 'Venta' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 border border-purple-200 dark:border-purple-800' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200 dark:border-blue-800'}`}>
+                      <span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-wider shadow-sm ${archivo.tipoOperacion === 'Venta' ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30'}`}>
                         {archivo.tipoOperacion === 'Venta' ? 'VENTA A CLIENTE' : 'COMPRA A PROVEEDOR'}
                       </span>
-                      <h4 className={`font-bold truncate ${archivo.estado === 'duplicado' ? 'text-gray-500 dark:text-slate-400 line-through' : 'text-gray-800 dark:text-white'}`}>{archivo.contraparte}</h4>
+                      <h4 className={`text-lg font-bold truncate ${archivo.estado === 'duplicado' ? 'text-gray-500 dark:text-slate-400 line-through' : 'text-gray-900 dark:text-white'}`}>{archivo.contraparte}</h4>
                     </div>
 
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-slate-400 font-medium">
-                      <span>RFC: <span className="text-gray-700 dark:text-slate-300">{archivo.rfcContraparte}</span></span>
-                      <span>Folio: <span className="text-gray-700 dark:text-slate-300">{archivo.folio}</span></span>
-                      <span className="bg-gray-100 dark:bg-slate-700 px-2 rounded-full">{archivo.tipo}</span>
-                      <span>Fecha: <span className="text-gray-700 dark:text-slate-300">{archivo.fecha.split('T')[0]}</span></span>
+                    <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-500 dark:text-slate-400 font-medium">
+                      <span className="flex items-center gap-1.5"><svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg> <span className="text-gray-700 dark:text-slate-200 font-semibold">{archivo.rfcContraparte}</span></span>
+                      <span className="flex items-center gap-1.5"><svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> <span className="text-gray-700 dark:text-slate-200 font-semibold">{archivo.folio}</span></span>
+                      <span className="bg-gray-100/80 dark:bg-slate-700/80 px-2.5 py-0.5 rounded-md font-semibold text-gray-700 dark:text-slate-300">{archivo.tipo}</span>
+                      <span className="flex items-center gap-1.5"><svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> <span className="text-gray-700 dark:text-slate-200 font-semibold">{archivo.fecha.split('T')[0]}</span></span>
                     </div>
 
-                    <div className="mt-2">
-                      <p className={`text-xs font-bold ${archivo.estado === 'listo' ? 'text-emerald-600 dark:text-emerald-400' : archivo.estado === 'duplicado' ? 'text-gray-500 dark:text-slate-400' : archivo.estado === 'advertencia' ? 'text-orange-600 dark:text-orange-400' : 'text-red-500'}`}>
-                        {archivo.estado === 'duplicado' ? '🚫' : archivo.estado === 'listo' ? '✓' : '⚠️'} {archivo.mensaje}
+                    <div className="mt-3 flex items-center gap-2 bg-white/50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-gray-100 dark:border-slate-700/50">
+                      <div className={`w-2 h-2 rounded-full ${archivo.estado === 'listo' ? 'bg-emerald-500 animate-pulse' : archivo.estado === 'duplicado' ? 'bg-gray-400' : archivo.estado === 'advertencia' ? 'bg-orange-500' : 'bg-red-500'}`}></div>
+                      <p className={`text-sm font-bold ${archivo.estado === 'listo' ? 'text-emerald-700 dark:text-emerald-400' : archivo.estado === 'duplicado' ? 'text-gray-600 dark:text-slate-400' : archivo.estado === 'advertencia' ? 'text-orange-700 dark:text-orange-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {archivo.mensaje}
                       </p>
-                      {archivo.mensajeSecundario && (
-                        <p className="text-[10px] text-red-500 font-bold mt-1 bg-red-50 dark:bg-red-900/20 inline-block px-2 py-0.5 rounded">{archivo.mensajeSecundario}</p>
-                      )}
                     </div>
                   </div>
 
-                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto mt-2 md:mt-0 gap-2">
-                    <span className={`text-xl font-bold ${archivo.estado === 'duplicado' ? 'text-gray-400' : 'text-gray-800 dark:text-white'}`}>{formatearDinero(archivo.total)}</span>
+                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto mt-2 md:mt-0 gap-3">
+                    <span className={`text-2xl font-black ${archivo.estado === 'duplicado' ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>{formatearDinero(archivo.total)}</span>
 
                     <div className="flex gap-2">
                       {/* BOTÓN NUEVO: Rellenar Datos si es un PDF huérfano */}
                       {!archivo.xmlListo && archivo.pdfListo && archivo.estado === 'advertencia' && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setPdfVacioAEditar(archivo); }}
-                          className="text-[11px] font-bold text-white bg-orange-500 hover:bg-orange-600 px-3 py-1.5 rounded-lg shadow-sm transition transform hover:scale-105"
+                          className="text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-4 py-2 rounded-xl shadow-md transition transform hover:scale-105 flex items-center gap-1"
                         >
-                          ✏️ Añadir Datos
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                          Añadir Datos
                         </button>
                       )}
 
@@ -346,9 +362,10 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
                       {archivo.xmlListo && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setFilaExpandida(filaExpandida === archivo.id ? null : archivo.id); }}
-                          className="text-[11px] font-semibold text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition"
+                          className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-500/10 px-4 py-2 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-500/20 border border-blue-100 dark:border-blue-500/20 transition-all flex items-center gap-1.5"
                         >
-                          {filaExpandida === archivo.id ? 'Ocultar detalles ▴' : 'Ver productos ▾'}
+                          <svg className={`w-4 h-4 transition-transform duration-300 ${filaExpandida === archivo.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                          {filaExpandida === archivo.id ? 'Ocultar XML' : 'Ver Dets. XML'}
                         </button>
                       )}
                     </div>
@@ -357,30 +374,30 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
 
                 {/* --- SECCIÓN DESPLEGABLE DE PRODUCTOS --- */}
                 {filaExpandida === archivo.id && archivo.conceptos.length > 0 && (
-                  <div className="bg-gray-50 dark:bg-slate-900/70 border-t border-gray-100 dark:border-slate-700 p-4 animate-fade-in-up">
-                    <h5 className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                      Conceptos de la Factura ({archivo.conceptos.length})
+                  <div className="bg-gray-50/80 dark:bg-slate-900/60 border-t border-gray-100 dark:border-slate-700/50 p-5 animate-fade-in-up backdrop-blur-md">
+                    <h5 className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2 bg-white/50 dark:bg-slate-800/50 inline-flex px-3 py-1.5 rounded-lg border border-gray-200/50 dark:border-slate-600/50">
+                      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                      Conceptos Certificados ({archivo.conceptos.length})
                     </h5>
-                    <div className="overflow-x-auto max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                    <div className="overflow-x-auto max-h-56 overflow-y-auto rounded-xl border border-gray-200 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/90 shadow-inner">
                       <table className="w-full text-left text-sm">
-                        <thead className="bg-gray-100 dark:bg-slate-900/50 sticky top-0">
+                        <thead className="bg-gray-100/90 dark:bg-slate-900/90 sticky top-0 backdrop-blur-sm z-10">
                           <tr className="text-xs text-gray-500 dark:text-slate-400 border-b border-gray-200 dark:border-slate-700">
-                            <th className="p-2 font-semibold w-16 text-center">Cant.</th>
-                            <th className="p-2 font-semibold">Descripción del Producto/Servicio</th>
-                            <th className="p-2 font-semibold text-right">P. Unitario</th>
-                            <th className="p-2 font-semibold text-right">Importe</th>
+                            <th className="p-3 font-bold w-16 text-center">Cant.</th>
+                            <th className="p-3 font-bold">Descripción del Producto/Servicio</th>
+                            <th className="p-3 font-bold text-right">P. Unitario</th>
+                            <th className="p-3 font-bold text-right">Importe</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
                           {archivo.conceptos.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
-                              <td className="p-2 text-center text-gray-600 dark:text-slate-300 font-medium">{item.cantidad}</td>
-                              <td className="p-2 text-gray-800 dark:text-slate-200" title={item.descripcion}>
-                                <div className="line-clamp-2 leading-tight text-xs">{item.descripcion}</div>
+                            <tr key={idx} className="hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors">
+                              <td className="p-3 text-center text-gray-700 dark:text-slate-300 font-bold">{item.cantidad}</td>
+                              <td className="p-3 text-gray-800 dark:text-slate-200" title={item.descripcion}>
+                                <div className="leading-relaxed text-sm">{item.descripcion}</div>
                               </td>
-                              <td className="p-2 text-right text-gray-600 dark:text-slate-300 font-mono text-xs">{formatearDinero(item.precio)}</td>
-                              <td className="p-2 text-right text-gray-800 dark:text-white font-bold font-mono text-xs">{formatearDinero(item.importe)}</td>
+                              <td className="p-3 text-right text-gray-600 dark:text-slate-300 font-mono text-xs font-semibold">{formatearDinero(item.precio)}</td>
+                              <td className="p-3 text-right text-blue-700 dark:text-blue-400 font-black font-mono text-sm">{formatearDinero(item.importe)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -399,14 +416,16 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
       <div className="h-40 w-full shrink-0"></div>
 
       {archivosEnEspera.length > 0 && (
-        <div className="fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-gray-200 dark:border-slate-700 p-4 flex justify-center md:justify-end gap-4 z-50 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)] animate-fade-in-up">
-          <button type="button" onClick={() => setArchivosEnEspera([])} className="px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition">
-            Cancelar Todo
-          </button>
-          <button id="btn-archivar" onClick={archivarFacturas} type="button" className={`font-bold py-3 px-10 rounded-xl shadow-lg transition transform flex items-center gap-2 ${archivosEnEspera.filter(a => a.estado !== 'error' && a.estado !== 'duplicado').length > 0 ? 'bg-blue-600 hover:bg-blue-700 text-white hover:-translate-y-0.5' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
-            Procesar y Archivar ({archivosEnEspera.filter(a => a.estado !== 'error' && a.estado !== 'duplicado').length})
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
-          </button>
+        <div className="fixed bottom-0 left-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border-t border-gray-200 dark:border-white/10 p-5 flex justify-center md:justify-end gap-4 z-50 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.1)] animate-fade-in-up">
+          <div className="max-w-5xl w-full mx-auto flex flex-col sm:flex-row justify-end gap-4">
+            <button type="button" onClick={() => setArchivosEnEspera([])} className="px-6 py-3.5 font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm border border-gray-200 dark:border-slate-600">
+              Cancelar Todo
+            </button>
+            <button id="btn-archivar" onClick={archivarFacturas} type="button" className={`font-black py-3.5 px-10 rounded-xl shadow-xl transition-all duration-300 flex items-center justify-center gap-3 text-lg ${archivosEnEspera.filter(a => a.estado !== 'error' && a.estado !== 'duplicado').length > 0 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-[0_10px_25px_-5px_rgba(37,99,235,0.5)] hover:-translate-y-1' : 'bg-gray-300 dark:bg-slate-700 text-gray-500 dark:text-slate-500 cursor-not-allowed hidden'}`}>
+              <svg className="w-6 h-6 animate-bounce mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+              Sincronizar y Archivar ({archivosEnEspera.filter(a => a.estado !== 'error' && a.estado !== 'duplicado').length})
+            </button>
+          </div>
         </div>
       )}
 
@@ -414,34 +433,33 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
       {/* MODAL / VENTANITA DE ÉXITO AL TERMINAR DE IMPORTAR */}
       {/* ========================================================= */}
       {resumenExito && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in-up">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-slate-700 relative transform transition-all scale-100">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl animate-fade-in-up">
+          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-[2.5rem] p-10 max-w-md w-full shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] border border-white/50 dark:border-slate-600/50 relative transform transition-all scale-100">
 
             {/* Icono gigante de éxito */}
-            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-gradient-to-br from-emerald-400 to-emerald-600 text-white rounded-full flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(16,185,129,0.5)] border-4 border-white dark:border-slate-800 animate-bounce">
+              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
             </div>
 
-            <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-2">¡Importación Exitosa!</h2>
-            <p className="text-center text-gray-600 dark:text-slate-400 font-medium mb-6">
-              Se procesaron y organizaron <span className="font-bold text-gray-800 dark:text-white text-lg">{resumenExito.cantidad}</span> comprobantes en tu bóveda.
+            <h2 className="text-3xl font-black text-center text-gray-800 dark:text-white mt-8 mb-2">¡Sincronización Exitosa!</h2>
+            <p className="text-center text-gray-600 dark:text-slate-400 text-lg font-medium mb-8">
+              Se han procesado y blindado <span className="font-black text-emerald-600 dark:text-emerald-400 text-2xl">{resumenExito.cantidad}</span> comprobantes en tu bóveda.
             </p>
 
             {/* Listita de los proveedores que el sistema creó automáticamente */}
             {resumenExito.nuevos.length > 0 && (
-              <div className="bg-gray-50 dark:bg-slate-900/50 rounded-2xl p-4 mb-6 border border-gray-100 dark:border-slate-700 max-h-40 overflow-y-auto">
-                <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"></path></svg>
-                  Nuevos Perfiles Creados:
+              <div className="bg-white dark:bg-slate-900/50 rounded-2xl p-5 mb-8 border border-gray-100 dark:border-slate-700 max-h-48 overflow-y-auto shadow-inner">
+                <p className="text-xs font-black text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                  Nuevos Perfiles Creados Automaticamente:
                 </p>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {resumenExito.nuevos.map((perfil, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm font-semibold text-gray-700 dark:text-slate-300">
-                      <span className={`w-2 h-2 rounded-full ${perfil.tipo === 'Proveedores' ? 'bg-blue-500' : 'bg-purple-500'}`}></span>
+                    <li key={i} className="flex items-center gap-3 text-sm font-bold text-gray-800 dark:text-slate-200 bg-gray-50 dark:bg-slate-800 p-2.5 rounded-xl border border-gray-100 dark:border-slate-700/50">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white ${perfil.tipo === 'Proveedores' ? 'bg-gradient-to-br from-purple-500 to-indigo-600' : 'bg-gradient-to-br from-cyan-500 to-blue-600'}`}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                      </div>
                       <span className="truncate flex-1">{perfil.nombre}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${perfil.tipo === 'Proveedores' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30'}`}>
-                        {perfil.tipo}
-                      </span>
                     </li>
                   ))}
                 </ul>
@@ -451,24 +469,16 @@ export default function Importador({ alVolver, modoOscuro, toggleTema, irAProvee
             {/* Los 3 Botones de acción */}
             <div className="space-y-3">
               <button
-                onClick={() => { setResumenExito(null); if (irAProveedores) irAProveedores(); }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition shadow-md flex justify-center items-center gap-2"
+                onClick={() => { setResumenExito(null); if (irABoveda) irABoveda(); }}
+                className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-white dark:hover:bg-gray-100 dark:text-slate-900 text-white font-black py-4 px-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex justify-center items-center gap-2"
               >
-                Ir a Directorio de Proveedores
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
-              </button>
-
-              <button
-                onClick={() => { setResumenExito(null); if (irAClientes) irAClientes(); }}
-                className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-xl transition shadow-md flex justify-center items-center gap-2"
-              >
-                Ir a Directorio de Clientes
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                Ver facturas en la Bóveda
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
               </button>
 
               <button
                 onClick={() => setResumenExito(null)}
-                className="w-full bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-bold py-3 px-4 rounded-xl transition border border-gray-200 dark:border-slate-600"
+                className="w-full bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-bold py-3.5 px-4 rounded-xl transition border border-gray-200 dark:border-slate-600"
               >
                 Cerrar y seguir importando
               </button>

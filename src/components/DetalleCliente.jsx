@@ -251,88 +251,128 @@ export default function DetalleCliente({ alVolver, modoOscuro, toggleTema, clien
     };
 
     return (
-        <div className="min-h-screen p-4 md:p-8 font-sans max-w-7xl mx-auto pb-20">
+        <div className="min-h-screen p-4 md:p-8 font-sans max-w-[1800px] mx-auto pb-20 relative overflow-hidden">
 
-            {/* HEADER TIPO TARJETA */}
-            <header className="animate-fade-in-up bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 mb-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 dark:bg-cyan-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                <div className="flex justify-between items-start relative z-10 mb-6">
-                    <button onClick={alVolver} className="flex items-center gap-2 text-gray-500 hover:text-cyan-600 dark:text-gray-400 dark:hover:text-cyan-400 font-semibold transition bg-gray-50 dark:bg-slate-900/50 px-4 py-2 rounded-xl">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            {/* Fondo de Orbs Animados (Atria Premium Style) */}
+            <div className="absolute inset-0 pointer-events-none z-0 fixed">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-cyan-500/20 dark:bg-cyan-600/10 rounded-full blur-[140px] animate-float-slow"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-500/20 dark:bg-blue-600/10 rounded-full blur-[140px] animate-float-reverse delay-1000"></div>
+            </div>
+
+            {/* HEADER TIPO TARJETA PREMIUM GLASS */}
+            <header className="animate-fade-in-up bg-white/60 dark:bg-slate-800/40 backdrop-blur-2xl p-8 md:p-10 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/60 dark:border-slate-700/50 mb-10 relative overflow-hidden group">
+
+                {/* Glow interno dinámico */}
+                <div className="absolute top-0 right-0 w-[50rem] h-[50rem] bg-cyan-500/5 dark:bg-cyan-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none transition-all group-hover:scale-110 duration-1000"></div>
+
+                <div className="flex justify-between items-start relative z-10 mb-10">
+                    <button onClick={alVolver} className="group flex items-center gap-2.5 px-5 py-3 bg-white/50 dark:bg-slate-800/60 hover:bg-white/90 dark:hover:bg-slate-700/90 backdrop-blur-md rounded-2xl shadow-sm border border-white/60 dark:border-slate-600/50 transition-all hover:scale-105 text-gray-700 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400 font-bold text-sm">
+                        <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
                         Volver al Directorio
                     </button>
-                    <div className="flex items-center gap-2">
-                        <button onClick={sincronizarLocal} disabled={sincronizando} className="p-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 transition disabled:opacity-50">
-                            <svg className={`w-5 h-5 ${sincronizando ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        </button>
-                        <button onClick={toggleTema} className="p-2.5 rounded-xl bg-gray-50 dark:bg-slate-900/50 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition">
-                            {modoOscuro ? '☀️' : '🌙'}
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={sincronizarLocal}
+                            disabled={sincronizando}
+                            title="Sincronizar Datos"
+                            className="group p-3 rounded-2xl bg-white/50 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 backdrop-blur-md shadow-sm border border-white/60 dark:border-slate-600/50 transition-all hover:scale-110 active:scale-95 disabled:opacity-50"
+                        >
+                            <svg className={`w-5 h-5 ${sincronizando ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                         </button>
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
-                    <div className="w-24 h-24 bg-white dark:bg-[#0f141e] rounded-2xl border-2 border-gray-100 dark:border-slate-700 shadow-sm flex items-center justify-center p-2 overflow-hidden">
-                        {cliente.logo ? <img src={cliente.logo} alt="Logo" className="max-w-full max-h-full object-contain" /> : <span className="text-3xl font-black text-gray-400 dark:text-slate-600">{cliente.nombre.charAt(0)}</span>}
-                    </div>
-                    <div className="text-center md:text-left flex-1">
-                        <h1 className="text-3xl font-bold text-gray-800 dark:text-white leading-tight">{cliente.nombre}</h1>
-                        <p className="text-gray-500 dark:text-slate-400 font-medium mb-3">RFC: {cliente.rfc || 'No registrado'} • Regla: {cliente.tipoPago?.toUpperCase() || 'CONTADO'}</p>
-                        <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${deudaLocal > 0 ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-900/30' : 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/30'}`}>
-                                {deudaLocal > 0 ? `🔴 Tiene Deuda a nuestro favor` : '🟢 Todo Cobrado'}
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-10 relative z-10">
+                    <div className="w-32 h-32 bg-white/90 dark:bg-[#0f141e]/90 backdrop-blur-xl rounded-[2.5rem] border-2 border-white/60 dark:border-slate-600/60 shadow-2xl flex items-center justify-center p-4 overflow-hidden transform transition-all hover:scale-110 hover:rotate-3">
+                        {cliente.logo ?
+                            <img src={cliente.logo} alt="Logo" className="max-w-full max-h-full object-contain filter drop-shadow-md" /> :
+                            <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-cyan-500 to-blue-700 dark:from-cyan-400 dark:to-blue-500">
+                                {cliente.nombre.charAt(0)}
                             </span>
+                        }
+                    </div>
+                    <div className="text-center md:text-left flex-1 mt-2">
+                        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+                            <h1 className="text-5xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">{cliente.nombre}</h1>
+                            <div className="flex items-center justify-center md:justify-start gap-2">
+                                <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border shadow-sm transition-all duration-500 ${deudaLocal > 0 ? 'bg-red-500 text-white border-red-400 shadow-red-500/20' : 'bg-emerald-500 text-white border-emerald-400 shadow-emerald-500/20'}`}>
+                                    {deudaLocal > 0 ? `DEUDA ACTIVA` : 'SIN DEUDA'}
+                                </span>
+                                <span className="bg-cyan-600 text-white px-3 py-1 text-[10px] font-black uppercase rounded-lg tracking-widest shadow-lg shadow-cyan-500/20">
+                                    {cliente.tipoPago || 'CONTADO'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap justify-center md:justify-start items-center gap-4 text-sm font-bold text-gray-500 dark:text-slate-400">
+                            <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-4 py-2 rounded-xl border border-black/5 dark:border-white/5 transition-colors hover:bg-black/10 dark:hover:bg-white/10">
+                                <span className="opacity-60">RFC:</span>
+                                <span className="text-gray-800 dark:text-gray-200 font-mono tracking-wider">{cliente.rfc || 'XENX010101000'}</span>
+                            </div>
+                            <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-4 py-2 rounded-xl border border-black/5 dark:border-white/5 transition-colors hover:bg-black/10 dark:hover:bg-white/10">
+                                <span className="opacity-60">Dirección:</span>
+                                <span className="text-gray-800 dark:text-gray-200 truncate max-w-xs">{cliente.direccion || 'Sin dirección registrada'}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </header>
 
             {/* GRID PRINCIPAL */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
                 <div className="lg:col-span-2 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up delay-100">
-                        <div className={`bg-white dark:bg-slate-800 p-5 rounded-3xl border shadow-sm relative overflow-hidden transition-colors ${deudaLocal > 0 ? 'border-red-200 dark:border-red-900/50' : 'border-gray-100 dark:border-slate-700'}`}>
-                            <div className={`absolute top-0 left-0 w-1 h-full transition-colors ${deudaLocal > 0 ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></div>
-                            <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 mb-1">Por Cobrar</p>
-                            <h3 className={`text-3xl font-bold transition-colors ${deudaLocal > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatearDinero(deudaLocal)}</h3>
+                        {/* Tarjeta Por Cobrar */}
+                        <div className={`bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 rounded-3xl border shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 ${deudaLocal > 0 ? 'border-orange-200 dark:border-orange-900/50 hover:shadow-orange-500/10' : 'border-white/50 dark:border-slate-700/50'}`}>
+                            <div className={`absolute top-0 left-0 w-1.5 h-full transition-colors ${deudaLocal > 0 ? 'bg-gradient-to-b from-orange-400 to-orange-600 animate-pulse' : 'bg-gradient-to-b from-emerald-400 to-emerald-600'}`}></div>
+                            <p className="text-sm font-bold text-gray-500 dark:text-slate-400 mb-1 tracking-wide uppercase">Por Cobrar</p>
+                            <h3 className={`text-3xl font-black transition-colors tracking-tight ${deudaLocal > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatearDinero(deudaLocal)}</h3>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
+
+                        {/* Tarjeta Crédito */}
+                        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 rounded-3xl border border-white/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-all duration-300 hover:-translate-y-1 hover:shadow-cyan-500/10">
                             <div className="flex justify-between items-end mb-1">
-                                <p className="text-sm font-semibold text-gray-500 dark:text-slate-400">Límite Otorgado</p>
-                                {limiteCredito > 0 ? (<span className="text-xs font-bold text-cyan-500">{Math.round(100 - porcentajeCredito)}% libre</span>) : (<span className="text-xs font-bold text-emerald-500">Sin Límite</span>)}
+                                <p className="text-sm font-bold text-gray-500 dark:text-slate-400 tracking-wide uppercase">Crédito Disponible</p>
+                                {limiteCredito > 0 ? (<span className="text-xs font-black text-cyan-500 bg-cyan-50 dark:bg-cyan-900/30 px-2 py-0.5 rounded-md">{Math.round(100 - porcentajeCredito)}%</span>) : (<span className="text-xs font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md">Ilimitado</span>)}
                             </div>
-                            <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">{limiteCredito > 0 ? formatearDinero(creditoDisponible) : '---'}</h3>
-                            <div className="w-full bg-gray-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full transition-all duration-1000 ${porcentajeCredito > 85 ? 'bg-red-500' : porcentajeCredito > 60 ? 'bg-orange-400' : 'bg-cyan-500'}`} style={{ width: `${limiteCredito > 0 ? porcentajeCredito : 100}%` }}></div>
+                            <h3 className="text-3xl font-black text-gray-800 dark:text-white mb-4 tracking-tight">{limiteCredito > 0 ? formatearDinero(creditoDisponible) : '---'}</h3>
+                            <div className="w-full bg-white/50 dark:bg-slate-900/50 border border-gray-200/50 dark:border-slate-700 h-2.5 rounded-full overflow-hidden shadow-inner">
+                                <div className={`h-full rounded-full transition-all duration-1000 ${porcentajeCredito > 85 ? 'bg-gradient-to-r from-red-500 to-red-600' : porcentajeCredito > 60 ? 'bg-gradient-to-r from-orange-400 to-orange-500' : 'bg-gradient-to-r from-cyan-500 to-blue-500'}`} style={{ width: `${limiteCredito > 0 ? porcentajeCredito : 100}%` }}></div>
                             </div>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
-                            <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 mb-1">Total Vendido</p>
-                            <h3 className="text-2xl font-bold text-gray-800 dark:text-white">{formatearDinero(ventasTotales)}</h3>
+
+                        {/* Tarjeta Histórico */}
+                        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 rounded-3xl border border-white/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-blue-500/10">
+                            <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-cyan-500 to-blue-600"></div>
+                            <p className="text-sm font-bold text-gray-500 dark:text-slate-400 mb-1 tracking-wide uppercase">Ventas Históricas</p>
+                            <h3 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">{formatearDinero(ventasTotales)}</h3>
                         </div>
                     </div>
 
                     {/* Gráfica */}
-                    <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm animate-fade-in-up delay-200">
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Tendencia de Ventas</h3>
+                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 md:p-8 rounded-[2rem] border border-white/50 dark:border-slate-700/50 shadow-sm animate-fade-in-up delay-200">
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-6">
+                            <svg className="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                            Tendencia de Ventas
+                        </h3>
                         {datosGrafica.length > 0 ? (
-                            <div className="h-48 flex items-end gap-2 md:gap-4 border-b border-gray-200 dark:border-slate-700 pb-2">
+                            <div className="h-48 flex items-end gap-2 md:gap-4 border-b border-gray-200/50 dark:border-slate-700/50 pb-2 relative">
+                                <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/5 to-transparent rounded-lg pointer-events-none"></div>
                                 {datosGrafica.map((dato, index) => (
-                                    <div key={index} className="relative flex-1 flex flex-col items-center group h-full justify-end">
-                                        <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-xs py-1.5 px-2.5 rounded-lg whitespace-nowrap z-10 font-bold shadow-lg">{formatearDinero(dato.monto)}</div>
-                                        <div className="w-full max-w-[40px] bg-gradient-to-t from-cyan-100 to-cyan-200 dark:from-cyan-900/30 dark:to-cyan-800/50 group-hover:from-cyan-400 group-hover:to-cyan-500 rounded-t-lg transition-all duration-[1000ms] relative" style={{ height: animarGrafica ? `${dato.porcentajeAlto}%` : '0%' }}>
-                                            <div className="absolute top-0 w-full h-1.5 bg-cyan-500 rounded-t-lg"></div>
+                                    <div key={index} className="relative flex-1 flex flex-col items-center group h-full justify-end z-10">
+                                        <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-800/90 backdrop-blur-md text-gray-800 dark:text-white border border-gray-200 dark:border-slate-600 text-xs py-1.5 px-2.5 rounded-lg whitespace-nowrap z-20 font-bold shadow-xl">{formatearDinero(dato.monto)}</div>
+                                        <div className="w-full max-w-[48px] bg-gradient-to-t from-cyan-400/80 to-blue-500/80 hover:from-cyan-500 hover:to-blue-600 rounded-t-xl transition-all duration-[1000ms] shadow-inner relative overflow-hidden" style={{ height: animarGrafica ? `${dato.porcentajeAlto}%` : '0%' }}>
+                                            <div className="absolute top-0 w-full h-1.5 bg-white/40"></div>
                                         </div>
-                                        <span className="text-xs font-semibold text-gray-500 dark:text-slate-400 mt-2">{dato.mes}</span>
+                                        <span className="text-xs font-bold text-gray-500 dark:text-slate-400 mt-2 bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-white/50 dark:border-slate-700/50">{dato.mes}</span>
                                     </div>
                                 ))}
                             </div>
-                        ) : <p className="text-gray-400 text-sm text-center py-8">No hay datos para la gráfica.</p>}
+                        ) : <div className="h-48 flex items-center justify-center bg-gray-50/50 dark:bg-slate-900/10 rounded-2xl border border-dashed border-gray-200 dark:border-slate-700"><p className="text-gray-400 font-medium font-bold">No hay datos suficientes para graficar.</p></div>}
                     </div>
 
                     {/* TABLA DE FACTURAS */}
-                    <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm animate-fade-in-up delay-200">
+                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 md:p-8 rounded-[2rem] border border-white/50 dark:border-slate-700/50 shadow-sm animate-fade-in-up delay-200">
                         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
                             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                             Facturas Emitidas ({facturas.length})
@@ -390,7 +430,7 @@ export default function DetalleCliente({ alVolver, modoOscuro, toggleTema, clien
                     </div>
 
                     {/* CATALOGO */}
-                    <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm animate-fade-in-up delay-300">
+                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 md:p-8 rounded-[2rem] border border-white/50 dark:border-slate-700/50 shadow-sm animate-fade-in-up delay-300">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                             <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                                 <svg className="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
@@ -398,7 +438,7 @@ export default function DetalleCliente({ alVolver, modoOscuro, toggleTema, clien
                             </h3>
 
                             <div className="relative w-full md:w-64">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                                 </div>
                                 <input
@@ -406,7 +446,7 @@ export default function DetalleCliente({ alVolver, modoOscuro, toggleTema, clien
                                     placeholder="Buscar producto..."
                                     value={busquedaProducto}
                                     onChange={(e) => setBusquedaProducto(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-[#1a1f2b] text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 text-gray-800 dark:text-white transition-all"
+                                    className="w-full pl-10 pr-4 py-3 border border-white/60 dark:border-slate-600/50 rounded-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 text-gray-800 dark:text-white transition-all shadow-inner"
                                 />
                             </div>
                         </div>
@@ -465,10 +505,14 @@ export default function DetalleCliente({ alVolver, modoOscuro, toggleTema, clien
 
                 {/* COLUMNA DERECHA */}
                 <div className="space-y-6 animate-fade-in-up delay-300">
-                    <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-6 rounded-3xl shadow-lg text-white">
-                        <h3 className="text-lg font-bold mb-4">Acciones Rápidas</h3>
-                        <button onClick={() => setModalCobroAbierto(true)} className="w-full bg-white text-cyan-600 hover:bg-gray-50 font-bold py-3 px-4 rounded-xl flex justify-center items-center gap-2 transition shadow-md transform hover:-translate-y-0.5">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-8 rounded-[2rem] shadow-xl shadow-blue-500/20 text-white relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
+                        <h3 className="text-lg font-black mb-6 flex items-center gap-2">
+                            <div className="p-1.5 bg-white/20 rounded-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
+                            Acciones Rápidas
+                        </h3>
+                        <button onClick={() => setModalCobroAbierto(true)} className="w-full bg-white text-blue-700 hover:bg-cyan-50 font-black py-4 px-4 rounded-2xl flex justify-center items-center gap-3 transition-all shadow-lg transform hover:-translate-y-1 active:scale-[0.98] cursor-pointer">
+                            <svg className="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             Registrar Cobro
                         </button>
                     </div>
